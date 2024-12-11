@@ -1,0 +1,18 @@
+<!-- projects/templates/projects/task_detail.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ task.title }} - Task Detail</title>
+</head>
+<body>
+    <h1>{{ task.title }}</h1>
+    <p>{{ task.description }}</p>
+    <p><strong>Assigned to:</strong> {{ task.assigned_to.username }}</p>
+    <p><strong>Start Date:</strong> {{ task.start_date }}</p>
+    <p><strong>Due Date:</strong> {{ task.due_date }}</p>
+
+    <a href="{% url 'project_detail' task.project.id %}">Back to Project</a>
+</body>
+</html>

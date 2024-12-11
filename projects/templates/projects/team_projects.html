@@ -1,0 +1,8 @@
+<h1>Projects for Team: {{ team.name }}</h1>
+<ul>
+    {% for project in projects %}
+    <li>
+        <a href="{% url 'project_detail' project.id %}">{{ project.name }}</a> - {{ project.description }}
+    </li>
+    {% endfor %}
+</ul>

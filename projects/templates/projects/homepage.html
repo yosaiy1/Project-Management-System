@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="homepage-container">
+    <h1>Welcome to the Project Management System</h1>
+    <p>This is the homepage of your project management app. Below is a list of all projects.</p>
+    
+    <h2>Projects</h2>
+    <ul class="project-list">
+        {% for project in projects %}
+            <li class="project-item">
+                <a href="{% url 'project_detail' project.id %}" class="project-link">{{ project.name }}</a>
+            </li>
+        {% empty %}
+            <p>No projects available.</p>
+        {% endfor %}
+    </ul>
+  </div>
+
+  <style>
+    .homepage-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f9f9f9;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    h1, h2 {
+      color: #007bff;
+    }
+
+    .project-list {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    .project-item {
+      background-color: #fff;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+
+    .project-link {
+      text-decoration: none;
+      color: #007bff;
+      font-weight: bold;
+    }
+
+    .project-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+{% endblock %}

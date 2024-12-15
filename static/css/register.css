@@ -1,103 +1,210 @@
-/* Body and Container */
-body {
-    background: #f0f4f8;
-    font-family: 'Roboto', sans-serif;
-}
-
-.container {
-    max-width: 100%;
-    padding: 3rem 1.5rem;
+/* General styling */
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: linear-gradient(135deg, #eef2f6, #dfe8fc, #f0f4ff);
+    font-family: 'Poppins', Arial, sans-serif;
+    color: #333;
     display: flex;
     justify-content: center;
     align-items: center;
+    overflow: hidden;
 }
 
-/* Card Styling */
+/* Centering container */
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    animation: slideUp 1s ease;
+}
+
+/* Stylish rectangular card */
 .card {
-    background: #ffffff;
-    border-radius: 15px;
-    box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.1);
-    padding: 2rem;
-    margin-top: 2rem;
+    background: linear-gradient(to bottom right, #ffffff, #f7f9fc);
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    padding: 40px 30px;
+    width: 500px;
+    min-height: 500px;
+    text-align: center;
+    position: relative;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
-/* Heading */
+/* Decorative animated circles */
+.card::before, .card::after {
+    content: "";
+    position: absolute;
+    background: linear-gradient(135deg, #6b9eff, #4e73df);
+    border-radius: 50%;
+    opacity: 0.2;
+    z-index: 0;
+}
+
+.card::before {
+    width: 180px;
+    height: 180px;
+    top: -70px;
+    left: -70px;
+    animation: bounceIn 4s infinite;
+}
+
+.card::after {
+    width: 150px;
+    height: 150px;
+    bottom: -60px;
+    right: -60px;
+    animation: bounceIn 4s infinite alternate;
+}
+
+/* Header styling */
 h2 {
-    font-size: 1.8rem;
-    color: #333333;
-    font-weight: 600;
+    color: #4e73df;
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 30px;
+    position: relative;
+    z-index: 1;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
-/* Form Fields */
+/* Form styling */
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    position: relative;
+    z-index: 1;
+}
+
+/* Form group styling */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+/* Input field styling */
+.form-control {
+    width: 100%;
+    padding: 15px 20px;
+    border: 2px solid #d6dbe4;
+    border-radius: 10px;
+    font-size: 1rem;
+    background: #f9f9f9;
+    color: #555;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+.form-control:focus {
+    border-color: #4e73df;
+    box-shadow: 0 0 12px rgba(78, 115, 223, 0.6);
+    outline: none;
+}
+
 .form-label {
     font-weight: 600;
-    color: #333333;
-}
-
-input.form-control {
-    border-radius: 10px;
-    border: 1px solid #ccc;
-    padding: 1rem;
     font-size: 1rem;
+    color: #444;
+    margin-bottom: 10px;
 }
 
-input.form-control:focus {
-    border-color: #1abc9c;
-    box-shadow: 0 0 5px rgba(26, 188, 156, 0.5);
+/* Username and password specific styling */
+input[name="username"], input[name="password"], input[name="email"], input[name="first_name"], input[name="last_name"] {
+    padding: 12px 20px;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: 2px solid #d6dbe4;
+    background: #f9f9f9;
+    transition: all 0.3s ease;
+    color: #555;
+    margin-bottom: 20px; /* Space between fields */
 }
 
-button[type="submit"] {
-    background-color: #1abc9c;
-    border: none;
+input[name="username"]:focus, input[name="password"]:focus, input[name="email"]:focus, input[name="first_name"]:focus, input[name="last_name"]:focus {
+    border-color: #4e73df;
+    box-shadow: 0 0 10px rgba(78, 115, 223, 0.6);
+    outline: none;
+}
+
+/* Register button design */
+.btn-primary {
+    background: linear-gradient(135deg, #4e73df, #375bb3);
     color: white;
     font-size: 1.1rem;
-    padding: 0.75rem;
+    font-weight: 600;
+    padding: 15px 20px;
+    border: none;
     border-radius: 10px;
-    margin-top: 1.5rem;
-    transition: all 0.3s ease;
-}
-
-button[type="submit"]:hover {
-    background-color: #16a085;
     cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    box-shadow: 0 6px 18px rgba(78, 115, 223, 0.3);
+    margin-top: 30px; /* Adjusted to move the button down slightly */
 }
 
-/* Error Styling */
-.alert-danger {
-    background-color: #f8d7da;
-    border: 1px solid #f5c6cb;
-    color: #721c24;
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1.5rem;
+.btn-primary:hover {
+    background: linear-gradient(135deg, #375bb3, #2b4e96);
+    box-shadow: 0 12px 24px rgba(55, 91, 179, 0.4);
+    transform: translateY(-4px);
 }
 
-.text-danger small {
-    font-size: 0.875rem;
+.btn-primary:active {
+    transform: scale(0.98);
+    box-shadow: 0 6px 12px rgba(55, 91, 179, 0.3);
 }
 
-/* Link Styling */
-.link-primary {
-    color: #1abc9c;
+/* Links */
+a.link-primary {
+    color: #4e73df;
     text-decoration: none;
+    font-weight: 600;
+    transition: color 0.3s ease;
 }
 
-.link-primary:hover {
-    color: #16a085;
+a.link-primary:hover {
+    color: #375bb3;
     text-decoration: underline;
 }
 
-/* Responsive Design */
+/* Key animations */
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes bounceIn {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+/* Responsive adjustments */
 @media (max-width: 768px) {
-    .container {
-        padding: 2rem 1rem;
-    }
-
     .card {
-        padding: 1.5rem;
+        width: 90%;
+        padding: 30px;
     }
-
     h2 {
-        font-size: 1.5rem;
+        font-size: 1.8rem;
+    }
+    .form-control, .btn-primary {
+        font-size: 0.95rem;
     }
 }

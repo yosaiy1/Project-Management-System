@@ -116,10 +116,17 @@ form {
 }
 
 /* Username and password specific styling */
-input[name="username"], input[name="password"], input[name="email"], input[name="first_name"], input[name="last_name"] {
+input[name="username"], 
+input[name="password1"], 
+input[name="email"], 
+input[name="role"], 
+input[name="password2"], 
+input[name="first_name"], 
+input[name="last_name"] {
     padding: 12px 20px;
     font-size: 1rem;
     border-radius: 8px;
+    width: 100%;
     border: 2px solid #d6dbe4;
     background: #f9f9f9;
     transition: all 0.3s ease;
@@ -127,10 +134,37 @@ input[name="username"], input[name="password"], input[name="email"], input[name=
     margin-bottom: 20px; /* Space between fields */
 }
 
-input[name="username"]:focus, input[name="password"]:focus, input[name="email"]:focus, input[name="first_name"]:focus, input[name="last_name"]:focus {
+input[name="username"]:focus, 
+input[name="password1"]:focus, 
+input[name="email"]:focus, 
+input[name="role"]:focus, 
+input[name="password2"]:focus, 
+input[name="first_name"]:focus, 
+input[name="last_name"]:focus {
     border-color: #4e73df;
     box-shadow: 0 0 10px rgba(78, 115, 223, 0.6);
     outline: none;
+}
+
+/* Align text and text boxes */
+.mb-3 {
+    display: flex;
+    flex-direction: column; /* Stack label and input vertically */
+    align-items: flex-start; /* Aligns items to the left */
+    gap: 5px; /* Adds a small space between the label and input */
+}
+
+/* Center text within the container above inputs */
+.mb-3 .form-label {
+    text-align: left; /* Keeps labels aligned to the left */
+    width: 100%; /* Ensures label spans the full width of the form group */
+    font-size: 1rem;
+    margin-bottom: 0; /* Removes unnecessary spacing */
+}
+
+.mb-3 .form-control {
+    flex: 2; /* Input field takes up more space */
+    max-width: 100%; /* Ensures the input doesn't overflow */
 }
 
 /* Register button design */

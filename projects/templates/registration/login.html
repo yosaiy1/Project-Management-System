@@ -1,67 +1,35 @@
 {% extends 'base.html' %}
 
 {% block content %}
-  <div class="login-container">
-    <h2>Login</h2>
-    <form method="POST">
-      {% csrf_token %}
-      <div class="form-group">
-        {{ form.as_p }}
+  <div class="container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h2 class="text-center mb-4">Login</h2>
+            <form method="POST" class="needs-validation">
+              {% csrf_token %}
+              {% for field in form %}
+                <div class="mb-3">
+                  {{ field.label_tag }}
+                  {{ field }}
+                  {% if field.errors %}
+                    <div class="text-danger">
+                      {% for error in field.errors %}
+                        <small>{{ error }}</small>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+              <button type="submit" class="btn btn-primary w-100">Login</button>
+            </form>
+            <p class="text-center mt-3">
+              Don't have an account? <a href="{% url 'register' %}">Sign up here</a>.
+            </p>
+          </div>
+        </div>
       </div>
-      <button type="submit" class="btn btn-primary">Login</button>
-    </form>
-
-    <p class="register-link">
-      Don't have an account? <a href="{% url 'register' %}">Sign up here</a>.
-    </p>
-
-    {% if form.errors %}
-      <div class="error-message">
-        <p>There were errors in your form submission. Please check below.</p>
-        <ul>
-          {% for field, errors in form.errors.items %}
-            {% for error in errors %}
-              <li>{{ field }}: {{ error }}</li>
-            {% endfor %}
-          {% endfor %}
-        </ul>
-      </div>
-    {% endif %}
+    </div>
   </div>
-
-  <style>
-    .login-container {
-      max-width: 400px;
-      margin: auto;
-      padding: 20px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      background-color: #f9f9f9;
-    }
-    .form-group {
-      margin-bottom: 15px;
-    }
-    .btn {
-      width: 100%;
-      padding: 10px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    .btn:hover {
-      background-color: #0056b3;
-    }
-    .register-link {
-      text-align: center;
-      margin-top: 10px;
-    }
-    .error-message {
-      color: red;
-      font-size: 14px;
-      margin-top: 10px;
-    }
-  </style>
 {% endblock %}

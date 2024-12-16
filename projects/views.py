@@ -8,6 +8,7 @@ from .forms import ProjectForm, TaskForm, CustomUserCreationForm, CustomLoginFor
 
 
 # Homepage View
+@login_required
 def homepage(request):
     projects = Project.objects.all()  
     return render(request, 'projects/homepage.html', {'projects': projects})
@@ -21,7 +22,7 @@ def project_create(request):
         if form.is_valid():
             form.save()
             messages.success(request, 'Project created successfully!')
-            return redirect('homepage')  
+            return redirect('homepage')
         else:
             messages.error(request, 'There was an error with your submission.')
     else:
@@ -58,10 +59,10 @@ def task_create(request, project_id):
         form = TaskForm(request.POST)
         if form.is_valid():
             task = form.save(commit=False)
-            task.project = project  
+            task.project = project
             task.save()
             messages.success(request, 'Task created successfully!')
-            return redirect('project_detail', project_id=project.id)  
+            return redirect('project_detail', project_id=project.id)
         else:
             messages.error(request, 'There was an error with your task submission.')
     else:
@@ -75,20 +76,20 @@ def task_create(request, project_id):
 def task_delete(request, task_id):
     task = get_object_or_404(Task, id=task_id)
     project_id = task.project.id
-    task.delete()  
+    task.delete()
     messages.success(request, 'Task deleted successfully!')
-    return redirect('project_detail', project_id=project_id)  
+    return redirect('project_detail', project_id=project_id)
 
 
 # User Registration View
 def register(request):
     if request.method == 'POST':
-        form = CustomUserCreationForm(request.POST)  
+        form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            user = form.save()  
-            login(request, user)  
+            user = form.save()
+            login(request, user)
             messages.success(request, 'Registration successful! You are now logged in.')
-            return redirect('homepage')  
+            return redirect('homepage')
         else:
             messages.error(request, 'There was an error with your registration.')
     else:

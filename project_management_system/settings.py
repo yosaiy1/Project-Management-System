@@ -141,3 +141,5 @@ AUTH_USER_MODEL = 'projects.User'
 LOGIN_URL = 'login'  # Or whatever the name of your login view is
 
 LOGIN_REDIRECT_URL = 'homepage'
+
+LOGOUT_REDIRECT_URL = 'login'  # This should match the name of your custom login URL

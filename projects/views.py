@@ -25,6 +25,10 @@ def project_create(request):
             return redirect('homepage')
         else:
             messages.error(request, 'There was an error with your submission.')
+            # Display form errors (helps users correct issues)
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
     else:
         form = ProjectForm()
 
@@ -65,6 +69,10 @@ def task_create(request, project_id):
             return redirect('project_detail', project_id=project.id)
         else:
             messages.error(request, 'There was an error with your task submission.')
+            # Display form errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
     else:
         form = TaskForm()
 
@@ -76,9 +84,15 @@ def task_create(request, project_id):
 def task_delete(request, task_id):
     task = get_object_or_404(Task, id=task_id)
     project_id = task.project.id
-    task.delete()
-    messages.success(request, 'Task deleted successfully!')
-    return redirect('project_detail', project_id=project_id)
+
+    # Optional: confirm deletion
+    if request.method == "POST":
+        task.delete()
+        messages.success(request, 'Task deleted successfully!')
+        return redirect('project_detail', project_id=project_id)
+    
+    # Redirect to confirmation page
+    return render(request, 'projects/task_delete_confirm.html', {'task': task, 'project_id': project_id})
 
 
 # User Registration View
@@ -92,6 +106,10 @@ def register(request):
             return redirect('homepage')
         else:
             messages.error(request, 'There was an error with your registration.')
+            # Display form errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
     else:
         form = CustomUserCreationForm()
 
@@ -114,6 +132,10 @@ def login_view(request):
                 messages.error(request, 'Invalid username or password.')
         else:
             messages.error(request, 'Invalid login details')
+            # Display form errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
     else:
         form = CustomLoginForm()
 

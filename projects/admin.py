@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import User, Team, TeamMember, Project, Task, File, Notification, ProjectReport
 
-# Inline admin for TeamMember to be added directly from Team admin
+#Inline admin for TeamMember to be added directly from Team admin
 class TeamMemberInline(admin.TabularInline):
     model = TeamMember
     extra = 1  # Number of empty forms to display by default
@@ -9,7 +9,7 @@ class TeamMemberInline(admin.TabularInline):
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ('username', 'email', 'role')
+    list_display = ('username', 'email')  # Removed 'role' field
 
     def delete_model(self, request, obj):
         # Prevent deletion of a user if they are assigned to a task or team member

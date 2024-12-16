@@ -3,7 +3,7 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from .models import Project, Task, User
 from django.core.exceptions import ValidationError
 
-# Project Form
+#Project Form
 class ProjectForm(forms.ModelForm):
     class Meta:
         model = Project
@@ -26,8 +26,8 @@ class ProjectForm(forms.ModelForm):
                 raise ValidationError("Start date cannot be later than end date.")
         return cleaned_data
 
-# Task Form
-class TaskForm(forms.ModelForm):  
+#Task Form
+class TaskForm(forms.ModelForm):
     class Meta:
         model = Task
         fields = ['title', 'description', 'start_date', 'due_date', 'assigned_to']
@@ -49,15 +49,14 @@ class TaskForm(forms.ModelForm):
                 raise ValidationError("Start date cannot be later than due date.")
         return cleaned_data
 
-# Custom User Creation Form (for registration)
+#Custom User Creation Form (for registration)
 class CustomUserCreationForm(UserCreationForm):
     class Meta:
         model = User
-        fields = ('username', 'email', 'role', 'password1', 'password2')
+        fields = ('username', 'email', 'password1', 'password2')  # Removed 'role'
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
-            'role': forms.Select(attrs={'class': 'form-control'}),
             'password1': forms.PasswordInput(attrs={'class': 'form-control'}),
             'password2': forms.PasswordInput(attrs={'class': 'form-control'}),
         }
@@ -68,7 +67,7 @@ class CustomUserCreationForm(UserCreationForm):
             raise ValidationError("A user with this email already exists.")
         return email
 
-# Custom Login Form (for login functionality)
+#Custom Login Form (for login functionality)
 class CustomLoginForm(AuthenticationForm):
     username = forms.CharField(
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Username'})

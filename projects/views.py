@@ -3,16 +3,14 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.forms import AuthenticationForm
-from .models import Team, Project, Task
-from .forms import ProjectForm, TaskForm, CustomUserCreationForm, CustomLoginForm
-
+from .models import Team, Project, Task, Profile
+from .forms import ProjectForm, TaskForm, CustomUserCreationForm, CustomLoginForm, ProfileForm
 
 # Homepage View
 @login_required
 def homepage(request):
     projects = Project.objects.all()  
     return render(request, 'projects/homepage.html', {'projects': projects})
-
 
 # Project Create View
 @login_required
@@ -25,7 +23,6 @@ def project_create(request):
             return redirect('homepage')
         else:
             messages.error(request, 'There was an error with your submission.')
-            # Display form errors (helps users correct issues)
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f"{field}: {error}")
@@ -34,13 +31,11 @@ def project_create(request):
 
     return render(request, 'projects/project_form.html', {'form': form})
 
-
 # View Projects of a Team
 def team_projects(request, team_id):
     team = get_object_or_404(Team, id=team_id)
     projects = Project.objects.filter(team=team)
     return render(request, 'projects/team_projects.html', {'team': team, 'projects': projects})
-
 
 # Project Detail View
 def project_detail(request, project_id):
@@ -48,12 +43,10 @@ def project_detail(request, project_id):
     tasks = Task.objects.filter(project=project)
     return render(request, 'projects/project_detail.html', {'project': project, 'tasks': tasks})
 
-
 # Task Detail View
 def task_detail(request, task_id):
     task = get_object_or_404(Task, id=task_id)
     return render(request, 'projects/task_detail.html', {'task': task})
-
 
 # Task Create View
 @login_required
@@ -69,7 +62,6 @@ def task_create(request, project_id):
             return redirect('project_detail', project_id=project.id)
         else:
             messages.error(request, 'There was an error with your task submission.')
-            # Display form errors
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f"{field}: {error}")
@@ -78,22 +70,18 @@ def task_create(request, project_id):
 
     return render(request, 'projects/task_form.html', {'form': form, 'project': project})
 
-
 # Task Delete View
 @login_required
 def task_delete(request, task_id):
     task = get_object_or_404(Task, id=task_id)
     project_id = task.project.id
 
-    # Optional: confirm deletion
     if request.method == "POST":
         task.delete()
         messages.success(request, 'Task deleted successfully!')
         return redirect('project_detail', project_id=project_id)
     
-    # Redirect to confirmation page
     return render(request, 'projects/task_delete_confirm.html', {'task': task, 'project_id': project_id})
-
 
 # User Registration View
 def register(request):
@@ -106,7 +94,6 @@ def register(request):
             return redirect('homepage')
         else:
             messages.error(request, 'There was an error with your registration.')
-            # Display form errors
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f"{field}: {error}")
@@ -114,7 +101,6 @@ def register(request):
         form = CustomUserCreationForm()
 
     return render(request, 'registration/register.html', {'form': form})
-
 
 # User Login View
 def login_view(request):
@@ -132,7 +118,6 @@ def login_view(request):
                 messages.error(request, 'Invalid username or password.')
         else:
             messages.error(request, 'Invalid login details')
-            # Display form errors
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f"{field}: {error}")
@@ -140,3 +125,40 @@ def login_view(request):
         form = CustomLoginForm()
 
     return render(request, 'registration/login.html', {'form': form})
+
+
+@login_required
+def update_profile(request):
+    # Get or create the profile for the logged-in user
+    profile, created = Profile.objects.get_or_create(user=request.user)
+
+    if request.method == 'POST':
+        form = ProfileForm(request.POST, request.FILES, instance=profile)
+        if form.is_valid():
+            # Save the profile
+            updated_profile = form.save(commit=False)
+            updated_profile.save()
+
+            # Update the user's first and last name (if provided)
+            request.user.first_name = form.cleaned_data['first_name']
+            request.user.last_name = form.cleaned_data['last_name']
+            request.user.save()  # Save the user with updated names
+
+            messages.success(request, 'Profile updated successfully!')
+            return redirect('view_profile')  # Redirect to the profile view after saving
+        else:
+            messages.error(request, 'There was an error with your profile update.')
+            # Display form errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
+    else:
+        form = ProfileForm(instance=profile)
+
+    return render(request, 'profile/update_profile.html', {'form': form})
+
+# Profile View
+@login_required
+def view_profile(request):
+    profile = get_object_or_404(Profile, user=request.user)
+    return render(request, 'profile/view_profile.html', {'profile': profile})

@@ -17,6 +17,10 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('register/', views.register, name='register'),
 
+    # Profile-related URLs
+    path('profile/update/', views.update_profile, name='update_profile'),  # Profile update
+    path('profile/', views.view_profile, name='view_profile'),  # View profile
+
     # Default Django auth URLs like password reset
     path('accounts/', include('django.contrib.auth.urls')),
 

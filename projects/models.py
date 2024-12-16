@@ -2,6 +2,8 @@ from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.db import models
 
 class User(AbstractUser):
+    # Removed the 'role' field
+    # role = models.CharField(max_length=50)  # This line has been removed.
 
     groups = models.ManyToManyField(
         Group,
@@ -22,6 +24,16 @@ class User(AbstractUser):
     def __str__(self):
         return self.username
 
+# Profile Model
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    bio = models.TextField(blank=True, null=True)  # User bio
+    profile_picture = models.ImageField(upload_to='profiles/', blank=True, null=True)  # Profile picture
+    date_of_birth = models.DateField(null=True, blank=True)  # Date of birth
+    phone_number = models.CharField(max_length=15, blank=True, null=True)  # User's phone number
+
+    def __str__(self):
+        return f"Profile of {self.user.username}"
 
 # Team Model
 class Team(models.Model):
@@ -31,7 +43,6 @@ class Team(models.Model):
     def __str__(self):
         return self.name
 
-
 # TeamMember Model
 class TeamMember(models.Model):
     team = models.ForeignKey(Team, on_delete=models.CASCADE)
@@ -39,7 +50,6 @@ class TeamMember(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.team.name}"
-
 
 # Project Model
 class Project(models.Model):
@@ -51,7 +61,6 @@ class Project(models.Model):
 
     def __str__(self):
         return self.name
-
 
 # Task Model
 class Task(models.Model):
@@ -65,7 +74,6 @@ class Task(models.Model):
     def __str__(self):
         return self.title
 
-
 # Files Model
 class File(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE)
@@ -74,7 +82,6 @@ class File(models.Model):
 
     def __str__(self):
         return self.file_name
-
 
 # Notification Model
 class Notification(models.Model):
@@ -85,7 +92,6 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"Notification for {self.user.username}"
-
 
 # ProjectReport Model
 class ProjectReport(models.Model):

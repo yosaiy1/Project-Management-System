@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile</title>
+    <!-- Bootstrap CSS CDN -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <!-- Display Full Name (first_name and last_name) -->
+                <h2>Profile of {{ profile.user.first_name }} {{ profile.user.last_name }}</h2>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        {% if profile.profile_picture %}
+                            <img src="{{ profile.profile_picture.url }}" alt="Profile Picture" class="img-fluid rounded-circle">
+                        {% else %}
+                            <img src="https://via.placeholder.com/150" alt="Default Profile Picture" class="img-fluid rounded-circle">
+                        {% endif %}
+                    </div>
+                    <div class="col-md-8">
+                        <p><strong>Bio:</strong> {{ profile.bio }}</p>
+                        <p><strong>Date of Birth:</strong> {{ profile.date_of_birth }}</p>
+                        <p><strong>Phone Number:</strong> {{ profile.phone_number }}</p>
+                        <a href="{% url 'update_profile' %}" class="btn btn-warning">Update Profile</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS, Popper.js and jQuery CDN -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

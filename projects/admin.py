@@ -1,7 +1,12 @@
 from django.contrib import admin
-from .models import User, Team, TeamMember, Project, Task, File, Notification, ProjectReport
+from .models import User, Team, TeamMember, Project, Task, File, Notification, ProjectReport, Profile
 
-#Inline admin for TeamMember to be added directly from Team admin
+# Inline for Profile Model
+class ProfileInline(admin.StackedInline):
+    model = Profile
+    extra = 1  # Number of empty forms to display by default
+
+# Inline admin for TeamMember to be added directly from Team admin
 class TeamMemberInline(admin.TabularInline):
     model = TeamMember
     extra = 1  # Number of empty forms to display by default
@@ -10,6 +15,7 @@ class TeamMemberInline(admin.TabularInline):
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
     list_display = ('username', 'email')  # Removed 'role' field
+    inlines = [ProfileInline]  # Add Profile inline for each user
 
     def delete_model(self, request, obj):
         # Prevent deletion of a user if they are assigned to a task or team member
@@ -62,3 +68,8 @@ class NotificationAdmin(admin.ModelAdmin):
 class ProjectReportAdmin(admin.ModelAdmin):
     list_display = ('project', 'generated_on')
     search_fields = ['project__name']  # Enable search by project name
+
+# Optional separate profile admin
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'bio', 'profile_picture')

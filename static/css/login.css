@@ -27,7 +27,8 @@ body, html {
     border-radius: 20px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
     padding: 40px 30px;
-    width: 500px;
+    width: 100%;
+    max-width: 500px;
     min-height: 500px;
     text-align: center;
     position: relative;
@@ -77,20 +78,13 @@ h2 {
 form {
     display: flex;
     flex-direction: column;
-    gap: 25px;
+    gap: 20px;
     position: relative;
     z-index: 1;
 }
 
-/* Form group styling */
-.form-group {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-}
-
 /* Input field styling */
-.form-control {
+.form-control, input[name="username"], input[name="password"] {
     width: 100%;
     padding: 15px 20px;
     border: 2px solid #d6dbe4;
@@ -102,12 +96,13 @@ form {
     box-sizing: border-box;
 }
 
-.form-control:focus {
+.form-control:focus, input[name="username"]:focus, input[name="password"]:focus {
     border-color: #4e73df;
     box-shadow: 0 0 12px rgba(78, 115, 223, 0.6);
     outline: none;
 }
 
+/* Form label styling */
 .form-label {
     font-weight: 600;
     font-size: 1rem;
@@ -117,14 +112,7 @@ form {
 
 /* Username and password specific styling */
 input[name="username"], input[name="password"] {
-    padding: 12px 20px;
-    font-size: 1rem;
-    border-radius: 8px;
-    border: 2px solid #d6dbe4;
-    background: #f9f9f9;
-    transition: all 0.3s ease;
-    color: #555;
-    margin-bottom: 20px; /* Space between fields */
+    margin-bottom: 15px; /* Space between fields */
 }
 
 input[name="username"]:focus, input[name="password"]:focus {
@@ -147,7 +135,7 @@ input[name="username"]:focus, input[name="password"]:focus {
     text-transform: uppercase;
     letter-spacing: 1.2px;
     box-shadow: 0 6px 18px rgba(78, 115, 223, 0.3);
-    margin-top: 30px; /* Adjusted to move the button down slightly */
+    margin-top: 20px; /* Adjusted */
 }
 
 .btn-primary:hover {

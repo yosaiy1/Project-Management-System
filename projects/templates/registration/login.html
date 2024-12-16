@@ -1,7 +1,8 @@
 {% load static %}
+{% load custom_filters %}  <!-- Load the custom filter -->
 
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/login.css' %}">
+  <link rel="stylesheet" href="{% static 'css/register.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -30,7 +31,8 @@
             {% for field in form %}
               <div class="mb-3">
                 <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
-                {{ field }}
+                <!-- Apply the custom filter to add the form-control class -->
+                {{ field|add_class:"form-control" }}
                 {% if field.errors %}
                   <div class="text-danger mt-1">
                     {% for error in field.errors %}

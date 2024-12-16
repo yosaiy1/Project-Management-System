@@ -10,14 +10,13 @@ urlpatterns = [
     path('projects/<int:project_id>/tasks/<int:task_id>/', views.task_detail, name='task_detail'),  
     path('projects/<int:project_id>/tasks/<int:task_id>/delete/', views.task_delete, name='task_delete'),  
     path('teams/<int:team_id>/projects/', views.team_projects, name='team_projects'),  
-
     
-    path('login/', auth_views.LoginView.as_view(), name='login'),
+    # Update this to use the custom login view
+    path('login/', views.login_view, name='login'),  # <-- Custom login view
+    
     path('logout/', auth_views.LogoutView.as_view(), name='logout'), 
-
     
     path('register/', views.register, name='register'),  
-
     
-    path('accounts/', include('django.contrib.auth.urls')),  
+    path('accounts/', include('django.contrib.auth.urls')),  # Default auth urls like password reset
 ]

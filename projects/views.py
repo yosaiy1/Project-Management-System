@@ -5,9 +5,12 @@ from django.contrib.auth import login, authenticate
 from django.contrib.auth.forms import AuthenticationForm
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .models import Team, Project, Task, Profile, Notification, ProjectReport, TeamMember
+from .models import Team, Project, Task, Profile, Notification, ProjectReport, TeamMember, User
 from .forms import ProjectForm, TaskForm, CustomUserCreationForm, CustomLoginForm, ProfileForm, TeamMemberForm
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Homepage View
 @login_required
@@ -47,12 +50,14 @@ def project_create(request):
     return render(request, 'projects/project_form.html', {'form': form})
 
 # View Projects of a Team
+@login_required
 def team_projects(request, team_id):
     team = get_object_or_404(Team, id=team_id)
     projects = Project.objects.filter(team=team)
     return render(request, 'projects/team_projects.html', {'team': team, 'projects': projects})
 
 # Project Detail View
+@login_required
 def project_detail(request, project_id):
     project = get_object_or_404(Project, id=project_id)
     tasks = Task.objects.filter(project=project)
@@ -94,14 +99,14 @@ def task_create(request, project_id):
 
 # Task Update View
 @login_required
-def task_update(request, task_id):
-    task = get_object_or_404(Task, id=task_id)
+def task_update(request, project_id, task_id):
+    task = get_object_or_404(Task, id=task_id, project_id=project_id)
     if request.method == 'POST':
         form = TaskForm(request.POST, instance=task)
         if form.is_valid():
             form.save()
             messages.success(request, 'Task updated successfully!')
-            return redirect('task_detail', task_id=task.id)
+            return redirect('task_detail', project_id=project_id, task_id=task_id)
         else:
             messages.error(request, 'There was an error with your task update.')
             for field, errors in form.errors.items():
@@ -114,15 +119,12 @@ def task_update(request, task_id):
 
 # Task Delete View
 @login_required
-def task_delete(request, task_id):
-    task = get_object_or_404(Task, id=task_id)
-    project_id = task.project.id
-
+def task_delete(request, project_id, task_id):
+    task = get_object_or_404(Task, id=task_id, project_id=project_id)
     if request.method == "POST":
         task.delete()
         messages.success(request, 'Task deleted successfully!')
         return redirect('project_detail', project_id=project_id)
-    
     return render(request, 'projects/task_delete_confirm.html', {'task': task, 'project_id': project_id})
 
 # User Registration View
@@ -223,12 +225,15 @@ def manage_team_members(request, team_id):
     if request.method == 'POST':
         form = TeamMemberForm(request.POST)
         if form.is_valid():
-            form.save()
+            team_member = form.save(commit=False)
+            team_member.team = team
+            team_member.save()
             messages.success(request, 'Team member added successfully!')
-            return redirect('team_projects', team_id=team.id)
+            return redirect('manage_team_members', team_id=team.id)
     else:
         form = TeamMemberForm(initial={'team': team})
     return render(request, 'projects/manage_team_members.html', {'form': form, 'team': team})
+
 
 # Generate Report View
 @login_required
@@ -258,10 +263,6 @@ def send_notification(user, message):
     Notification.objects.create(user=user, message=message)
 
 # Update Task Status View
-import logging
-
-logger = logging.getLogger(__name__)
-
 @csrf_exempt
 def update_task_status(request, task_id):
     if request.method == 'POST':

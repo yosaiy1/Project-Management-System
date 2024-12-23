@@ -42,10 +42,14 @@ class Team(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        verbose_name = "Team"
+        verbose_name_plural = "Teams"
+
 # TeamMember Model
 class TeamMember(models.Model):
-    team = models.ForeignKey(Team, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='members')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='teams')
 
     class Meta:
         unique_together = ('team', 'user')  # Prevent duplicates
@@ -55,7 +59,7 @@ class TeamMember(models.Model):
 
 # Project Model
 class Project(models.Model):
-    team = models.ForeignKey(Team, on_delete=models.CASCADE)
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='projects')
     name = models.CharField(max_length=200)
     description = models.TextField()
     start_date = models.DateField()
@@ -70,7 +74,7 @@ class Project(models.Model):
 # Task Model
 class Task(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tasks')
-    assigned_to = models.ForeignKey(User, on_delete=models.CASCADE)
+    assigned_to = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tasks')
     title = models.CharField(max_length=200)
     description = models.TextField()
     start_date = models.DateField()
@@ -90,9 +94,10 @@ class Task(models.Model):
 
 # File Model
 class File(models.Model):
-    task = models.ForeignKey(Task, on_delete=models.CASCADE)
-    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='files')
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='uploaded_files')
     file_name = models.CharField(max_length=200)
+    file = models.FileField(upload_to='files/')
 
     class Meta:
         unique_together = ('task', 'file_name')  # Prevent duplicate file names for the same task
@@ -102,7 +107,7 @@ class File(models.Model):
 
 # Notification Model
 class Notification(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
     message = models.TextField()
     date_sent = models.DateTimeField(auto_now_add=True)
     read = models.BooleanField(default=False)
@@ -115,7 +120,7 @@ class Notification(models.Model):
 
 # ProjectReport Model
 class ProjectReport(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='reports')
     generated_on = models.DateTimeField(auto_now_add=True)
     content = models.TextField()
 

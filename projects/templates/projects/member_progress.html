@@ -1,0 +1,34 @@
+<!-- filepath: /c:/Users/paulx/Python Project/Project Management App/projects/templates/projects/member_progress.html -->
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Member Progress{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/member_progress.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Progress for {{ user.username }}</h2>
+    <div class="progress-container">
+        {% if tasks %}
+            <ul class="list-group">
+                {% for task in tasks %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5>{{ task.title }}</h5>
+                        <p>{{ task.description }}</p>
+                        <small>Due date: {{ task.due_date }}</small>
+                    </div>
+                    <span class="badge bg-{{ task.status|task_status_color }}">{{ task.get_status_display }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No tasks assigned.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

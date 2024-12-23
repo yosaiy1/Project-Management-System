@@ -57,6 +57,11 @@ class TeamAdmin(admin.ModelAdmin):
     inlines = [TeamMemberInline]  # Allow team members to be added inline
     search_fields = ['name', 'description']  # Enable search functionality
 
+@admin.register(TeamMember)
+class TeamMemberAdmin(admin.ModelAdmin):
+    list_display = ('team', 'user')
+    search_fields = ['team__name', 'user__username']
+
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
     list_display = ('name', 'team', 'start_date', 'end_date')
@@ -92,7 +97,3 @@ class NotificationAdmin(admin.ModelAdmin):
 class ProjectReportAdmin(admin.ModelAdmin):
     list_display = ('project', 'generated_on')
     search_fields = ['project__name']  # Enable search by project name
-
-@admin.register(Profile)
-class ProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'bio', 'profile_picture')

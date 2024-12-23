@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.contrib.auth import authenticate
 from .models import Project, Task, User, Profile, TeamMember
 from django.core.exceptions import ValidationError
 
@@ -29,13 +30,14 @@ class ProjectForm(forms.ModelForm):
 class TaskForm(forms.ModelForm):
     class Meta:
         model = Task
-        fields = ['title', 'description', 'start_date', 'due_date', 'assigned_to']
+        fields = ['title', 'description', 'start_date', 'due_date', 'assigned_to', 'status']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control'}),
             'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'due_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'assigned_to': forms.Select(attrs={'class': 'form-control'}),
+            'status': forms.Select(attrs={'class': 'form-control'}),
         }
 
     def clean(self):
@@ -79,6 +81,19 @@ class CustomLoginForm(AuthenticationForm):
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Password'})
     )
+
+    def clean(self):
+        username = self.cleaned_data.get('username')
+        password = self.cleaned_data.get('password')
+
+        if username and password:
+            user = authenticate(username=username, password=password)
+            if not user:
+                user = authenticate(email=username, password=password)
+                if not user:
+                    raise forms.ValidationError("Invalid login credentials")
+            self.confirm_login_allowed(user)
+        return self.cleaned_data
 
 # Profile Form (to allow name and profile updates)
 class ProfileForm(forms.ModelForm):

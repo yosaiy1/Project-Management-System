@@ -4,24 +4,19 @@
     margin: 0 auto;
 }
 
-h2, h3 {
+h2 {
     color: #343a40;
 }
 
-form {
-    margin-bottom: 20px;
+.progress-container {
+    margin-top: 20px;
 }
 
-button {
-    margin-top: 10px;
-}
-
-/* List Group Styles */
 .list-group-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 15px;
+    padding: 15px;
     border: 1px solid #dee2e6;
     border-radius: 5px;
     margin-bottom: 10px;
@@ -31,12 +26,20 @@ button {
     margin-bottom: 0;
 }
 
-.btn-danger {
-    background-color: #dc3545;
-    border-color: #dc3545;
+.badge {
+    font-size: 1rem;
+    padding: 10px;
+    border-radius: 5px;
 }
 
-.btn-danger:hover {
-    background-color: #c82333;
-    border-color: #bd2130;
+.bg-todo {
+    background-color: #ffc107;
+}
+
+.bg-inprogress {
+    background-color: #17a2b8;
+}
+
+.bg-done {
+    background-color: #28a745;
 }

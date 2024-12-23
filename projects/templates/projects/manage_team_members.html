@@ -1,81 +1,33 @@
-<!-- filepath: /c:/Users/paulx/Python Project/Project Management App/projects/templates/projects/homepage.html -->
+<!-- filepath: /c:/Users/paulx/Python Project/Project Management App/projects/templates/projects/manage_team_members.html -->
 {% extends 'base.html' %}
-
 {% load static %}
 
-{% block title %}Homepage{% endblock %}
+{% block title %}Manage Team Members{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/homepage.css' %}">
+<link rel="stylesheet" href="{% static 'css/manage_team_members.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col">
-            <h2 class="text-center">Welcome, {{ user.username }}!</h2>
-            <p class="text-center">Manage your projects and tasks efficiently.</p>
-        </div>
-    </div>
-
-    <div class="row mb-4">
-        <div class="col">
-            <div class="d-flex justify-content-between align-items-center">
-                <h3>Your Projects</h3>
-                <a href="{% url 'project_create' %}" class="btn btn-primary">Create New Project</a>
-            </div>
-            <hr>
-        </div>
-    </div>
-
-    <div class="row">
-        {% for project in projects %}
-        <div class="col-md-4 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">{{ project.name }}</h5>
-                    <p class="card-text">{{ project.description|truncatewords:20 }}</p>
-                    <a href="{% url 'project_detail' project.id %}" class="btn btn-outline-primary">View Project</a>
-                </div>
-                <div class="card-footer text-muted">
-                    <small>Start Date: {{ project.start_date }}</small><br>
-                    <small>End Date: {{ project.end_date }}</small>
-                </div>
-            </div>
-        </div>
-        {% empty %}
-        <div class="col">
-            <p class="text-center">You have no projects. <a href="{% url 'project_create' %}">Create a new project</a>.</p>
-        </div>
+<div class="container mt-4">
+    <h2 class="mb-4">Manage Team Members for {{ team.name }}</h2>
+    <form method="post" class="mb-4">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Add Member</button>
+    </form>
+    <hr>
+    <h3>Current Team Members</h3>
+    <ul class="list-group">
+        {% for member in team.teammember_set.all %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            {{ member.user.username }}
+            <form method="post" action="{% url 'remove_team_member' team.id member.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+            </form>
+        </li>
         {% endfor %}
-    </div>
-
-    <div class="row mt-5">
-        <div class="col">
-            <h3>Your Tasks</h3>
-            <hr>
-        </div>
-    </div>
-
-    <div class="row">
-        {% for task in tasks %}
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">{{ task.title }}</h5>
-                    <p class="card-text">{{ task.description|truncatewords:20 }}</p>
-                    <a href="{% url 'task_detail' task.project.id task.id %}" class="btn btn-outline-primary">View Task</a>
-                </div>
-                <div class="card-footer text-muted">
-                    <small>Due Date: {{ task.due_date }}</small>
-                </div>
-            </div>
-        </div>
-        {% empty %}
-        <div class="col">
-            <p class="text-center">You have no tasks assigned. Check your projects or <a href="{% url 'project_create' %}">create a new project</a>.</p>
-        </div>
-        {% endfor %}
-    </div>
+    </ul>
 </div>
 {% endblock %}

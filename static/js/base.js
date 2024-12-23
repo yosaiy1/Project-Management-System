@@ -80,4 +80,15 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         return cookieValue;
     }
+
+    // Sidebar Toggle
+    const sidebarToggle = document.querySelector('#sidebarToggle');
+    const sidebar = document.querySelector('#sidebar');
+
+    if (sidebarToggle && sidebar) {
+        sidebarToggle.addEventListener('click', function () {
+            sidebar.classList.toggle('collapsed');
+            body.classList.toggle('sidebar-collapsed');
+        });
+    }
 });

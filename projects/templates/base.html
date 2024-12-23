@@ -26,6 +26,9 @@
     <header class="bg-dark text-white py-2 shadow-sm">
         <div class="container">
             <div class="d-flex justify-content-between align-items-center">
+                <button id="sidebarToggle" class="btn btn-outline-light me-2 d-md-none">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
                 <h1 class="h5 mb-0">Project Management App</h1>
                 <nav class="navbar navbar-expand-lg navbar-dark">
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
@@ -72,26 +75,74 @@
         </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="flex-grow-1 py-5 px-4">
-        <div class="container">
-            {% if messages %}
-                <div class="alert-container">
-                    {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    {% endfor %}
+    <!-- Sidebar and Main Content -->
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="position-sticky">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" aria-current="page" href="{% url 'homepage' %}">
+                                <span data-feather="home"></span>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'project_create' %}">
+                                <span data-feather="file"></span>
+                                Create Project
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'team_projects' team_id=1 %}">
+                                <span data-feather="users"></span>
+                                Team Projects
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'manage_team_members' team_id=1 %}">
+                                <span data-feather="user-plus"></span>
+                                Manage Team Members
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'member_progress' %}">
+                                <span data-feather="bar-chart-2"></span>
+                                Member Progress
+                            </a>
+                        </li>
+                    </ul>
                 </div>
-            {% endif %}
-            {% block content %}{% endblock %}
+            </nav>
+
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Dashboard</h1>
+                </div>
+                <div class="container">
+                    {% if messages %}
+                        <div class="alert-container">
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% block content %}{% endblock %}
+                </div>
+            </main>
         </div>
-    </main>
+    </div>
 
     <!-- Footer -->
     <footer class="bg-dark text-white text-center py-3 mt-auto">
-        <p class="mb-0">&copy; 2024 Project Management App. All rights reserved.</p>
+        <div class="container">
+            <p class="mb-0">&copy; 2024 Project Management App. All rights reserved.</p>
+        </div>
     </footer>
 
     <!-- Bootstrap JS -->

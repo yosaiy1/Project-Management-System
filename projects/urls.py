@@ -30,6 +30,9 @@ urlpatterns = [
     # Member progress
     path('member_progress/', views.member_progress, name='member_progress'),
 
+    # Task status update
+    path('update_task_status/<int:task_id>/', views.update_task_status, name='update_task_status'),
+
     # Default Django auth URLs like password reset
     path('accounts/', include('django.contrib.auth.urls')),
 ]

@@ -3,14 +3,25 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.forms import AuthenticationForm
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from .models import Team, Project, Task, Profile, Notification, ProjectReport, TeamMember
 from .forms import ProjectForm, TaskForm, CustomUserCreationForm, CustomLoginForm, ProfileForm, TeamMemberForm
+import json
 
 # Homepage View
 @login_required
 def homepage(request):
-    projects = Project.objects.all()  
-    return render(request, 'projects/homepage.html', {'projects': projects})
+    projects = Project.objects.all()
+    todo_tasks = Task.objects.filter(status='todo')
+    inprogress_tasks = Task.objects.filter(status='inprogress')
+    done_tasks = Task.objects.filter(status='done')
+    return render(request, 'projects/homepage.html', {
+        'projects': projects,
+        'todo_tasks': todo_tasks,
+        'inprogress_tasks': inprogress_tasks,
+        'done_tasks': done_tasks
+    })
 
 # Project Create View
 @login_required
@@ -245,3 +256,24 @@ def member_progress(request):
 # Send Notification Function
 def send_notification(user, message):
     Notification.objects.create(user=user, message=message)
+
+# Update Task Status View
+import logging
+
+logger = logging.getLogger(__name__)
+
+@csrf_exempt
+def update_task_status(request, task_id):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            new_status = data.get('status')
+            task = Task.objects.get(id=task_id)
+            task.status = new_status
+            task.save()
+            logger.info(f"Task {task_id} status updated to {new_status}")
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            logger.error(f"Error updating task status: {e}")
+            return JsonResponse({'status': 'error'}, status=400)
+    return JsonResponse({'status': 'error'}, status=400)

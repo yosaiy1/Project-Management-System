@@ -75,6 +75,12 @@ class Task(models.Model):
     description = models.TextField()
     start_date = models.DateField()
     due_date = models.DateField()
+    STATUS_CHOICES = [
+        ('todo', 'To Do'),
+        ('inprogress', 'In Progress'),
+        ('done', 'Done'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='todo')
 
     class Meta:
         unique_together = ('project', 'title')  # Prevent duplicate task titles within the same project

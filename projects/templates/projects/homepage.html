@@ -77,5 +77,39 @@
         </div>
         {% endfor %}
     </div>
+
+    <div class="row mt-5">
+        <div class="col">
+            <h3>Kanban Board</h3>
+            <hr>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <h4>To Do</h4>
+            <ul id="todo" class="list-group">
+                {% for task in todo_tasks %}
+                <li class="list-group-item" data-id="{{ task.id }}">{{ task.title }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="col-md-4">
+            <h4>In Progress</h4>
+            <ul id="inprogress" class="list-group">
+                {% for task in inprogress_tasks %}
+                <li class="list-group-item" data-id="{{ task.id }}">{{ task.title }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="col-md-4">
+            <h4>Done</h4>
+            <ul id="done" class="list-group">
+                {% for task in done_tasks %}
+                <li class="list-group-item" data-id="{{ task.id }}">{{ task.title }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
 </div>
 {% endblock %}

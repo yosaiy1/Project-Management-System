@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import login, authenticate
+from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import AuthenticationForm
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -156,7 +156,7 @@ def register(request):
 # User Login View
 def login_view(request):
     if request.method == 'POST':
-        form = CustomLoginForm(request, data=request.POST)
+        form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
             username_or_email = form.cleaned_data.get('username')
             password = form.cleaned_data.get('password')
@@ -175,9 +175,21 @@ def login_view(request):
                 for error in errors:
                     messages.error(request, f"{field}: {error}")
     else:
-        form = CustomLoginForm()
+        form = AuthenticationForm()
 
     return render(request, 'registration/login.html', {'form': form})
+
+# User Logout View
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
+
+@login_required
+def logout_view(request):
+    logout(request)
+    messages.success(request, 'You have been logged out successfully.')
+    return render(request, 'registration/logout_confirmation.html')
 
 # Profile Update View
 @login_required
@@ -233,7 +245,6 @@ def manage_team_members(request, team_id):
     else:
         form = TeamMemberForm(initial={'team': team})
     return render(request, 'projects/manage_team_members.html', {'form': form, 'team': team})
-
 
 # Generate Report View
 @login_required

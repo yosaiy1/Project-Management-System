@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.contrib import messages
 from django import forms
 from django.forms.models import BaseInlineFormSet
@@ -11,8 +13,38 @@ class ProfileInline(admin.StackedInline):
     verbose_name_plural = 'profiles'
 
 # Custom User Admin
-class CustomUserAdmin(admin.ModelAdmin):
+class CustomUserAdmin(BaseUserAdmin):
+    add_form = UserCreationForm
+    form = UserChangeForm
+    model = User
     inlines = (ProfileInline,)
+    list_display = ('username', 'email', 'is_staff', 'is_superuser')
+    search_fields = ['username', 'email']
+    fieldsets = (
+        (None, {'fields': ('username', 'password')}),
+        ('Personal info', {'fields': ('email',)}),
+        ('Permissions', {'fields': ('is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Important dates', {'fields': ('last_login', 'date_joined')}),
+    )
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('username', 'email', 'password1', 'password2', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
+        }),
+    )
+
+    def delete_model(self, request, obj):
+        # Prevent deletion of a user if they are assigned to a task or team member
+        if obj.tasks.exists() or obj.teams.exists():
+            self.message_user(
+                request,
+                f"Cannot delete user '{obj.username}' because they are associated with tasks or teams.",
+                messages.ERROR
+            )
+            return
+        super().delete_model(request, obj)
+
+admin.site.register(User, CustomUserAdmin)
 
 # Unique Team Member Inline FormSet
 class UniqueTeamMemberInlineFormSet(BaseInlineFormSet):
@@ -33,23 +65,6 @@ class TeamMemberInline(admin.TabularInline):
     formset = UniqueTeamMemberInlineFormSet
     extra = 1  # Number of empty forms to display by default
     fields = ['user', 'team']
-
-@admin.register(User)
-class UserAdmin(admin.ModelAdmin):
-    list_display = ('username', 'email')
-    search_fields = ['username', 'email']
-    inlines = [ProfileInline]  # Add Profile inline for each user
-
-    def delete_model(self, request, obj):
-        # Prevent deletion of a user if they are assigned to a task or team member
-        if obj.task_set.exists() or obj.teammember_set.exists():
-            self.message_user(
-                request,
-                f"Cannot delete user '{obj.username}' because they are associated with tasks or teams.",
-                messages.ERROR
-            )
-            return
-        super().delete_model(request, obj)
 
 @admin.register(Team)
 class TeamAdmin(admin.ModelAdmin):

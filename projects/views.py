@@ -18,9 +18,13 @@ def project_create(request):
     if request.method == 'POST':
         form = ProjectForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Project created successfully!')
-            return redirect('homepage')
+            project_name = form.cleaned_data.get('name')
+            if Project.objects.filter(name=project_name).exists():
+                messages.error(request, 'A project with this name already exists.')
+            else:
+                form.save()
+                messages.success(request, 'Project created successfully!')
+                return redirect('homepage')
         else:
             messages.error(request, 'There was an error with your submission.')
             for field, errors in form.errors.items():
@@ -55,11 +59,15 @@ def task_create(request, project_id):
     if request.method == 'POST':
         form = TaskForm(request.POST)
         if form.is_valid():
-            task = form.save(commit=False)
-            task.project = project
-            task.save()
-            messages.success(request, 'Task created successfully!')
-            return redirect('project_detail', project_id=project.id)
+            task_title = form.cleaned_data.get('title')
+            if Task.objects.filter(project=project, title=task_title).exists():
+                messages.error(request, 'A task with this title already exists in this project.')
+            else:
+                task = form.save(commit=False)
+                task.project = project
+                task.save()
+                messages.success(request, 'Task created successfully!')
+                return redirect('project_detail', project_id=project.id)
         else:
             messages.error(request, 'There was an error with your task submission.')
             for field, errors in form.errors.items():
@@ -88,10 +96,17 @@ def register(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            login(request, user)
-            messages.success(request, 'Registration successful! You are now logged in.')
-            return redirect('homepage')
+            username = form.cleaned_data.get('username')
+            email = form.cleaned_data.get('email')
+            if User.objects.filter(username=username).exists():
+                messages.error(request, 'A user with this username already exists.')
+            elif User.objects.filter(email=email).exists():
+                messages.error(request, 'A user with this email already exists.')
+            else:
+                user = form.save()
+                login(request, user)
+                messages.success(request, 'Registration successful! You are now logged in.')
+                return redirect('homepage')
         else:
             messages.error(request, 'There was an error with your registration.')
             for field, errors in form.errors.items():

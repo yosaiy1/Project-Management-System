@@ -2,8 +2,7 @@ from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.db import models
 
 class User(AbstractUser):
-    # Removed the 'role' field
-    # role = models.CharField(max_length=50)  # This line has been removed.
+    email = models.EmailField(unique=True)  # Enforce unique emails
 
     groups = models.ManyToManyField(
         Group,
@@ -24,6 +23,7 @@ class User(AbstractUser):
     def __str__(self):
         return self.username
 
+
 # Profile Model
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
@@ -35,6 +35,7 @@ class Profile(models.Model):
     def __str__(self):
         return f"Profile of {self.user.username}"
 
+
 # Team Model
 class Team(models.Model):
     name = models.CharField(max_length=200)
@@ -43,13 +44,18 @@ class Team(models.Model):
     def __str__(self):
         return self.name
 
+
 # TeamMember Model
 class TeamMember(models.Model):
     team = models.ForeignKey(Team, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
+    class Meta:
+        unique_together = ('team', 'user')  # Prevent duplicates
+
     def __str__(self):
         return f"{self.user.username} - {self.team.name}"
+
 
 # Project Model
 class Project(models.Model):
@@ -62,6 +68,7 @@ class Project(models.Model):
     def __str__(self):
         return self.name
 
+
 # Task Model
 class Task(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tasks')
@@ -71,8 +78,12 @@ class Task(models.Model):
     start_date = models.DateField()
     due_date = models.DateField()
 
+    class Meta:
+        unique_together = ('project', 'title')  # Prevent duplicate task titles within the same project
+
     def __str__(self):
         return self.title
+
 
 # Files Model
 class File(models.Model):
@@ -80,8 +91,12 @@ class File(models.Model):
     uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)
     file_name = models.CharField(max_length=200)
 
+    class Meta:
+        unique_together = ('task', 'file_name')  # Prevent duplicate file names for the same task
+
     def __str__(self):
         return self.file_name
+
 
 # Notification Model
 class Notification(models.Model):
@@ -90,8 +105,12 @@ class Notification(models.Model):
     date_sent = models.DateTimeField(auto_now_add=True)
     read = models.BooleanField(default=False)
 
+    class Meta:
+        unique_together = ('user', 'message')  # Prevent duplicate notifications
+
     def __str__(self):
         return f"Notification for {self.user.username}"
+
 
 # ProjectReport Model
 class ProjectReport(models.Model):

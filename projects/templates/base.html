@@ -72,61 +72,22 @@
         </div>
     </header>
 
-    <!-- Sidebar and Main Content -->
-    <div class="d-flex">
-        <!-- Sidebar -->
-        <nav id="sidebar" class="bg-dark text-white p-3" style="min-width: 250px;">
-            <h4 class="text-center">Navigation</h4>
-            <ul class="nav flex-column">
-                <li class="nav-item">
-                    <a class="nav-link text-white" href="{% url 'homepage' %}">Home</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link text-white" href="{% url 'project_create' %}">Create Project</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link text-white" href="{% url 'team_projects' team_id=1 %}">Team Projects</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link text-white" href="{% url 'manage_team_members' team_id=1 %}">Manage Team Members</a>
-                </li>
-                {% if user.is_authenticated %}
-                    <li class="nav-item">
-                        <a class="nav-link text-white" href="{% url 'view_profile' %}">Profile</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-white" href="{% url 'update_profile' %}">Update Profile</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-white" href="{% url 'delete_account' %}">Delete Account</a>
-                    </li>
-                    <li class="nav-item">
-                        <form method="post" action="{% url 'logout' %}">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-link nav-link text-white">Logout</button>
-                        </form>
-                    </li>
-                {% endif %}
-            </ul>
-        </nav>
-
-        <!-- Main Content -->
-        <main class="flex-grow-1 py-5 px-4">
-            <div class="container">
-                {% if messages %}
-                    <div class="alert-container">
-                        {% for message in messages %}
-                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-                {% block content %}{% endblock %}
-            </div>
-        </main>
-    </div>
+    <!-- Main Content -->
+    <main class="flex-grow-1 py-5 px-4">
+        <div class="container">
+            {% if messages %}
+                <div class="alert-container">
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {% block content %}{% endblock %}
+        </div>
+    </main>
 
     <!-- Footer -->
     <footer class="bg-dark text-white text-center py-3 mt-auto">

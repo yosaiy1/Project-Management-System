@@ -8,10 +8,6 @@ body, html {
     background: #f0f4ff;
 }
 
-body.sidebar-hidden {
-    overflow-x: hidden;
-}
-
 /* Header Styling */
 header {
     background-color: #4e73df;
@@ -45,39 +41,12 @@ header h1 {
     color: #333;
 }
 
-/* Sidebar Styling */
-#sidebar {
-    background-color: #375bb3;
-    color: white;
-    min-width: 250px;
-    padding: 2rem 1rem;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-#sidebar h4 {
-    color: #ffcc00;
-    text-align: center;
-    margin-bottom: 1.5rem;
-}
-
-#sidebar .nav-link {
-    color: white;
-    transition: color 0.3s ease;
-}
-
-#sidebar .nav-link:hover {
-    color: #ffcc00;
-}
-
-#sidebar .nav-item + .nav-item {
-    margin-top: 0.5rem;
-}
-
 /* Main Content Styling */
 main {
     flex-grow: 1;
     padding: 2rem;
     background: #eef2f6;
+    transition: margin-left 0.3s ease;
 }
 
 main.full-width {

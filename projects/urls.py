@@ -11,8 +11,13 @@ urlpatterns = [
     path('projects/<int:project_id>/tasks/<int:task_id>/', views.task_detail, name='task_detail'),
     path('projects/<int:project_id>/tasks/<int:task_id>/update/', views.task_update, name='task_update'),
     path('projects/<int:project_id>/tasks/<int:task_id>/delete/', views.task_delete, name='task_delete'),
+    
+    # Team URLs
+    path('teams/', views.team_list, name='team_list'),  # Team list view
+    path('teams/<int:team_id>/', views.team_detail, name='team_detail'),  # Team detail view
     path('teams/<int:team_id>/projects/', views.team_projects, name='team_projects'),
-    path('teams/<int:team_id>/manage_members/', views.manage_team_members, name='manage_team_members'),
+    path('teams/<int:team_id>/members/view/', views.team_members, name='team_members'),  # Clarified purpose
+    path('teams/<int:team_id>/members/manage/', views.manage_team_members, name='manage_team_members'),  # Clarified purpose
 
     # User authentication URLs
     path('login/', views.login_view, name='login'),
@@ -27,12 +32,17 @@ urlpatterns = [
     # Report generation
     path('projects/<int:project_id>/generate_report/', views.generate_report, name='generate_report'),
 
-    # Member progress
+    # Progress URLs
+    path('progress/', views.progress, name='progress'),  # General progress view
     path('member_progress/', views.member_progress, name='member_progress'),
 
     # Task status update
     path('update_task_status/<int:task_id>/', views.update_task_status, name='update_task_status'),
 
-    # Default Django auth URLs like password reset
+    # Settings URLs
+    path('settings/', views.settings_view, name='settings'),
+    path('settings/change-password/', views.change_password, name='change_password'),
+
+    # Default Django auth URLs
     path('accounts/', include('django.contrib.auth.urls')),
 ]

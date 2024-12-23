@@ -1,8 +1,8 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import login, authenticate, logout
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth import login, authenticate, logout, update_session_auth_hash
+from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import Team, Project, Task, Profile, Notification, ProjectReport, TeamMember, User
@@ -15,15 +15,50 @@ logger = logging.getLogger(__name__)
 # Homepage View
 @login_required
 def homepage(request):
+    # Get the TeamMember instance for the logged-in user
+    try:
+        team_member = TeamMember.objects.get(user=request.user)
+        teams = Team.objects.filter(members=team_member)
+    except TeamMember.DoesNotExist:
+        # Handle cases where the user is not part of any team
+        teams = Team.objects.none()
+
+    team = teams.first() if teams.exists() else None  # Use the first team or None
     projects = Project.objects.all()
     todo_tasks = Task.objects.filter(status='todo')
     inprogress_tasks = Task.objects.filter(status='inprogress')
     done_tasks = Task.objects.filter(status='done')
+    unread_notifications_count = request.user.notifications.filter(read=False).count()
+
     return render(request, 'projects/homepage.html', {
         'projects': projects,
         'todo_tasks': todo_tasks,
         'inprogress_tasks': inprogress_tasks,
-        'done_tasks': done_tasks
+        'done_tasks': done_tasks,
+        'unread_notifications_count': unread_notifications_count,
+        'team': team,  # Pass the first team (or None) for the sidebar
+    })
+
+
+@login_required
+def settings_view(request):
+    return render(request, 'settings/settings.html')
+
+@login_required
+def change_password(request):
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)  # Important!
+            messages.success(request, 'Your password was successfully updated!')
+            return redirect('settings')
+        else:
+            messages.error(request, 'Please correct the error below.')
+    else:
+        form = PasswordChangeForm(request.user)
+    return render(request, 'settings/change_password.html', {
+        'form': form
     })
 
 # Project Create View
@@ -51,10 +86,18 @@ def project_create(request):
 
 # View Projects of a Team
 @login_required
-def team_projects(request, team_id):
-    team = get_object_or_404(Team, id=team_id)
-    projects = Project.objects.filter(team=team)
-    return render(request, 'projects/team_projects.html', {'team': team, 'projects': projects})
+def team_projects(request, team_id=None):
+    if team_id:
+        team = get_object_or_404(Team, id=team_id)
+        projects = Project.objects.filter(team=team)
+    else:
+        team = None
+        projects = Project.objects.all()
+    
+    return render(request, 'projects/team_projects.html', {
+        'team': team,
+        'projects': projects
+    })
 
 # Project Detail View
 @login_required
@@ -180,11 +223,6 @@ def login_view(request):
     return render(request, 'registration/login.html', {'form': form})
 
 # User Logout View
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth import logout
-
 @login_required
 def logout_view(request):
     logout(request)
@@ -285,7 +323,41 @@ def update_task_status(request, task_id):
             task.save()
             logger.info(f"Task {task_id} status updated to {new_status}")
             return JsonResponse({'status': 'success'})
+        except Task.DoesNotExist:
+            logger.error(f"Task with id {task_id} does not exist.")
+            return JsonResponse({'status': 'error', 'message': 'Task not found'}, status=404)
+        except json.JSONDecodeError:
+            logger.error("Invalid JSON payload.")
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON payload'}, status=400)
         except Exception as e:
             logger.error(f"Error updating task status: {e}")
-            return JsonResponse({'status': 'error'}, status=400)
-    return JsonResponse({'status': 'error'}, status=400)
+            return JsonResponse({'status': 'error', 'message': 'An unexpected error occurred'}, status=500)
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+@login_required
+def team_list(request):
+    teams = Team.objects.all()
+    return render(request, 'projects/team_list.html', {'teams': teams})
+
+@login_required
+def team_detail(request, team_id):
+    team = get_object_or_404(Team, id=team_id)
+    return render(request, 'projects/team_detail.html', {'team': team})
+
+@login_required
+def team_members(request, team_id):
+    team = get_object_or_404(Team, id=team_id)
+    members = TeamMember.objects.filter(team=team)
+    return render(request, 'projects/team_members.html', {
+        'team': team,
+        'members': members
+    })
+
+@login_required
+def progress(request):
+    projects = Project.objects.all()
+    tasks = Task.objects.all()
+    return render(request, 'projects/progress.html', {
+        'projects': projects,
+        'tasks': tasks
+    })

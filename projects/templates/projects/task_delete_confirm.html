@@ -1,0 +1,35 @@
+<!-- filepath: /c:/Users/paulx/Python Project/Project Management App/projects/templates/projects/task_delete_confirm.html -->
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Delete Task{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/task_delete_confirm.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2 class="text-center text-danger">Delete Task</h2>
+            <p class="text-center">Are you sure you want to delete the task <strong>{{ task.title }}</strong>?</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <form method="POST" action="{% url 'task_delete' task.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                        <a href="{% url 'task_detail' task.project.id task.id %}" class="btn btn-secondary">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

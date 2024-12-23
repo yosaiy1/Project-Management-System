@@ -1,6 +1,16 @@
+<!-- filepath: /c:/Users/paulx/Python Project/Project Management App/projects/templates/profiles/view_profile.html -->
 {% extends 'base.html' %}
 
+{% load static %}
+
+{% block title %}View Profile{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/view_profile.css' %}">
+{% endblock %}
+
 {% block content %}
+<div class="container">
     <div class="card mt-5">
         <div class="card-header bg-primary text-white">
             <!-- Display Full Name (first_name and last_name) -->
@@ -8,7 +18,7 @@
         </div>
         <div class="card-body">
             <div class="row">
-                <div class="col-md-4">
+                <div class="col-md-4 text-center">
                     {% if profile.profile_picture %}
                         <img src="{{ profile.profile_picture.url }}" alt="Profile Picture" class="img-fluid rounded-circle">
                     {% else %}
@@ -16,12 +26,16 @@
                     {% endif %}
                 </div>
                 <div class="col-md-8">
+                    <p><strong>Username:</strong> {{ profile.user.username }}</p>
+                    <p><strong>Email:</strong> {{ profile.user.email }}</p>
                     <p><strong>Bio:</strong> {{ profile.bio }}</p>
                     <p><strong>Date of Birth:</strong> {{ profile.date_of_birth }}</p>
                     <p><strong>Phone Number:</strong> {{ profile.phone_number }}</p>
                     <a href="{% url 'update_profile' %}" class="btn btn-warning">Update Profile</a>
+                    <a href="{% url 'delete_account' %}" class="btn btn-danger ml-2">Delete Account</a>
                 </div>
             </div>
         </div>
     </div>
+</div>
 {% endblock %}

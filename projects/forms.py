@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
-from .models import Project, Task, User, Profile
+from .models import Project, Task, User, Profile, TeamMember
 from django.core.exceptions import ValidationError
 
 # Project Form
@@ -74,7 +74,7 @@ class CustomUserCreationForm(UserCreationForm):
 # Custom Login Form (for login functionality)
 class CustomLoginForm(AuthenticationForm):
     username = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Username'})
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Username or Email'})
     )
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Password'})
@@ -111,3 +111,21 @@ class ProfileForm(forms.ModelForm):
         if commit:
             profile.save()
         return profile
+
+# Team Member Form (for managing team members)
+class TeamMemberForm(forms.ModelForm):
+    class Meta:
+        model = TeamMember
+        fields = ['team', 'user']
+        widgets = {
+            'team': forms.Select(attrs={'class': 'form-control'}),
+            'user': forms.Select(attrs={'class': 'form-control'}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        team = cleaned_data.get('team')
+        user = cleaned_data.get('user')
+        if TeamMember.objects.filter(team=team, user=user).exists():
+            raise ValidationError("This user is already a member of the team.")
+        return cleaned_data

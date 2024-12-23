@@ -1,28 +1,45 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Project</title>
-</head>
-<body>
-    <h1>Create a New Project</h1>
+<!-- filepath: /c:/Users/paulx/Python Project/Project Management App/projects/templates/projects/project_form.html -->
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Create Project{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/project_form.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2 class="text-center">Create a New Project</h2>
+        </div>
+    </div>
 
     <!-- Display messages -->
     {% if messages %}
-        <ul>
-            {% for message in messages %}
-                <li>{{ message }}</li>
-            {% endfor %}
-        </ul>
+    <div class="alert-container">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
     {% endif %}
 
-    <form method="POST">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Create Project</button>
-    </form>
-
-    <a href="{% url 'homepage' %}">Back to Homepage</a>
-</body>
-</html>
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <form method="POST" class="shadow-sm p-4 bg-white rounded">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'homepage' %}" class="btn btn-secondary">Back to Homepage</a>
+                    <button type="submit" class="btn btn-primary">Create Project</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

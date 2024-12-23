@@ -1,0 +1,50 @@
+/* General Container Styling */
+.container {
+    margin-top: 2rem;
+}
+
+/* Section Headers */
+h2 {
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 1rem;
+}
+
+/* Paragraph Styling */
+p {
+    font-size: 1rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+/* Strong Text Styling */
+strong {
+    color: #333;
+}
+
+/* Button Styling */
+.btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+    border-color: #545b62;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    p {
+        font-size: 0.9rem;
+    }
+
+    .btn-secondary {
+        font-size: 0.9rem;
+    }
+}

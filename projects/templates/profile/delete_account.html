@@ -1,0 +1,35 @@
+<!-- filepath: /c:/Users/paulx/Python Project/Project Management App/projects/templates/profiles/delete_account.html -->
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Delete Account{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/delete_account.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2 class="text-center text-danger">Delete Account</h2>
+            <p class="text-center">Are you sure you want to delete your account? This action cannot be undone.</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <form method="POST" action="{% url 'delete_account' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Yes, Delete My Account</button>
+                        <a href="{% url 'view_profile' %}" class="btn btn-secondary">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

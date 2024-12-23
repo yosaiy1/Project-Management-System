@@ -1,8 +1,9 @@
+<!-- filepath: /c:/Users/paulx/Python Project/Project Management App/projects/templates/registration/login.html -->
 {% load static %}
 {% load custom_filters %}  <!-- Load the custom filter -->
 
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/register.css' %}">
+  <link rel="stylesheet" href="{% static 'css/login.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -31,7 +32,6 @@
             {% for field in form %}
               <div class="mb-3">
                 <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
-                <!-- Apply the custom filter to add the form-control class -->
                 {{ field|add_class:"form-control" }}
                 {% if field.errors %}
                   <div class="text-danger mt-1">
@@ -43,10 +43,18 @@
               </div>
             {% endfor %}
 
+            <div class="mb-3 form-check">
+              <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me">
+              <label class="form-check-label" for="remember_me">Remember Me</label>
+            </div>
+
             <button type="submit" class="btn btn-primary w-100 py-2">Login</button>
           </form>
 
           <p class="text-center mt-4 mb-0">
+            <a href="{% url 'password_reset' %}" class="link-primary">Forgot your password?</a>
+          </p>
+          <p class="text-center mt-2 mb-0">
             Don't have an account? <a href="{% url 'register' %}" class="link-primary">Sign up here</a>.
           </p>
         </div>

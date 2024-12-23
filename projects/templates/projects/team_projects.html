@@ -1,8 +1,48 @@
-<h1>Projects for Team: {{ team.name }}</h1>
-<ul>
-    {% for project in projects %}
-    <li>
-        <a href="{% url 'project_detail' project.id %}">{{ project.name }}</a> - {{ project.description }}
-    </li>
-    {% endfor %}
-</ul>
+<!-- filepath: /c:/Users/paulx/Python Project/Project Management App/projects/templates/projects/team_projects.html -->
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Team Projects{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/team_projects.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2 class="text-center">Projects for Team: {{ team.name }}</h2>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for project in projects %}
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">{{ project.name }}</h5>
+                    <p class="card-text">{{ project.description|truncatewords:20 }}</p>
+                    <a href="{% url 'project_detail' project.id %}" class="btn btn-outline-primary">View Project</a>
+                </div>
+                <div class="card-footer text-muted">
+                    <small>Start Date: {{ project.start_date }}</small><br>
+                    <small>End Date: {{ project.end_date }}</small>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col">
+            <p class="text-center">No projects available for this team. <a href="{% url 'project_create' %}">Create a new project</a>.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="row mt-4">
+        <div class="col text-center">
+            <a href="{% url 'homepage' %}" class="btn btn-secondary">Back to Homepage</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

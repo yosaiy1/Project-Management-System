@@ -70,7 +70,6 @@ TEMPLATES = [
     },
 ]
 
-
 WSGI_APPLICATION = 'project_management_system.wsgi.application'
 
 
@@ -119,7 +118,6 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-# settings.py
 STATIC_URL = '/static/'
 MEDIA_URL = '/media/'
 
@@ -127,8 +125,9 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
-MEDIA_ROOT = BASE_DIR / "media"
+STATIC_ROOT = BASE_DIR / "staticfiles"  # Add this line
 
+MEDIA_ROOT = BASE_DIR / "media"
 
 
 # Default primary key field type
@@ -136,10 +135,10 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Custom user model
 AUTH_USER_MODEL = 'projects.User'
 
+# Authentication settings
 LOGIN_URL = 'login'  # Or whatever the name of your login view is
-
 LOGIN_REDIRECT_URL = 'homepage'
-
 LOGOUT_REDIRECT_URL = 'login'  # This should match the name of your custom login URL

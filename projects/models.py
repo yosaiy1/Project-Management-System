@@ -23,7 +23,6 @@ class User(AbstractUser):
     def __str__(self):
         return self.username
 
-
 # Profile Model
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
@@ -35,7 +34,6 @@ class Profile(models.Model):
     def __str__(self):
         return f"Profile of {self.user.username}"
 
-
 # Team Model
 class Team(models.Model):
     name = models.CharField(max_length=200)
@@ -43,7 +41,6 @@ class Team(models.Model):
 
     def __str__(self):
         return self.name
-
 
 # TeamMember Model
 class TeamMember(models.Model):
@@ -56,7 +53,6 @@ class TeamMember(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.team.name}"
 
-
 # Project Model
 class Project(models.Model):
     team = models.ForeignKey(Team, on_delete=models.CASCADE)
@@ -65,9 +61,11 @@ class Project(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
 
+    class Meta:
+        unique_together = ('name', 'team')  # Prevent duplicate project names within the same team
+
     def __str__(self):
         return self.name
-
 
 # Task Model
 class Task(models.Model):
@@ -84,8 +82,7 @@ class Task(models.Model):
     def __str__(self):
         return self.title
 
-
-# Files Model
+# File Model
 class File(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE)
     uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -96,7 +93,6 @@ class File(models.Model):
 
     def __str__(self):
         return self.file_name
-
 
 # Notification Model
 class Notification(models.Model):
@@ -110,7 +106,6 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"Notification for {self.user.username}"
-
 
 # ProjectReport Model
 class ProjectReport(models.Model):

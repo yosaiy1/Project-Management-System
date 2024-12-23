@@ -3,8 +3,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.forms import AuthenticationForm
-from .models import Team, Project, Task, Profile
-from .forms import ProjectForm, TaskForm, CustomUserCreationForm, CustomLoginForm, ProfileForm
+from .models import Team, Project, Task, Profile, Notification, ProjectReport, TeamMember
+from .forms import ProjectForm, TaskForm, CustomUserCreationForm, CustomLoginForm, ProfileForm, TeamMemberForm
 
 # Homepage View
 @login_required
@@ -48,9 +48,11 @@ def project_detail(request, project_id):
     return render(request, 'projects/project_detail.html', {'project': project, 'tasks': tasks})
 
 # Task Detail View
-def task_detail(request, task_id):
-    task = get_object_or_404(Task, id=task_id)
-    return render(request, 'projects/task_detail.html', {'task': task})
+@login_required
+def task_detail(request, project_id, task_id):
+    project = get_object_or_404(Project, id=project_id)
+    task = get_object_or_404(Task, id=task_id, project=project)
+    return render(request, 'projects/task_detail.html', {'task': task, 'project': project})
 
 # Task Create View
 @login_required
@@ -66,6 +68,7 @@ def task_create(request, project_id):
                 task = form.save(commit=False)
                 task.project = project
                 task.save()
+                send_notification(task.assigned_to, f"You have been assigned a new task: {task.title}")
                 messages.success(request, 'Task created successfully!')
                 return redirect('project_detail', project_id=project.id)
         else:
@@ -77,6 +80,26 @@ def task_create(request, project_id):
         form = TaskForm()
 
     return render(request, 'projects/task_form.html', {'form': form, 'project': project})
+
+# Task Update View
+@login_required
+def task_update(request, task_id):
+    task = get_object_or_404(Task, id=task_id)
+    if request.method == 'POST':
+        form = TaskForm(request.POST, instance=task)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Task updated successfully!')
+            return redirect('task_detail', task_id=task.id)
+        else:
+            messages.error(request, 'There was an error with your task update.')
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
+    else:
+        form = TaskForm(instance=task)
+
+    return render(request, 'projects/task_form.html', {'form': form, 'task': task})
 
 # Task Delete View
 @login_required
@@ -122,9 +145,11 @@ def login_view(request):
     if request.method == 'POST':
         form = CustomLoginForm(request, data=request.POST)
         if form.is_valid():
-            username = form.cleaned_data.get('username')
+            username_or_email = form.cleaned_data.get('username')
             password = form.cleaned_data.get('password')
-            user = authenticate(request, username=username, password=password)
+            user = authenticate(request, username=username_or_email, password=password)
+            if user is None:
+                user = authenticate(request, email=username_or_email, password=password)
             if user is not None:
                 login(request, user)
                 messages.success(request, 'Login successful!')
@@ -141,29 +166,22 @@ def login_view(request):
 
     return render(request, 'registration/login.html', {'form': form})
 
-
+# Profile Update View
 @login_required
 def update_profile(request):
-    # Get or create the profile for the logged-in user
     profile, created = Profile.objects.get_or_create(user=request.user)
-
     if request.method == 'POST':
         form = ProfileForm(request.POST, request.FILES, instance=profile)
         if form.is_valid():
-            # Save the profile
             updated_profile = form.save(commit=False)
             updated_profile.save()
-
-            # Update the user's first and last name (if provided)
             request.user.first_name = form.cleaned_data['first_name']
             request.user.last_name = form.cleaned_data['last_name']
-            request.user.save()  # Save the user with updated names
-
+            request.user.save()
             messages.success(request, 'Profile updated successfully!')
-            return redirect('view_profile')  # Redirect to the profile view after saving
+            return redirect('view_profile')
         else:
             messages.error(request, 'There was an error with your profile update.')
-            # Display form errors
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f"{field}: {error}")
@@ -172,8 +190,58 @@ def update_profile(request):
 
     return render(request, 'profile/update_profile.html', {'form': form})
 
+# Profile Delete View
+@login_required
+def delete_account(request):
+    if request.method == 'POST':
+        request.user.delete()
+        messages.success(request, 'Account deleted successfully!')
+        return redirect('register')
+    return render(request, 'profile/delete_account.html')
+
 # Profile View
 @login_required
 def view_profile(request):
     profile = get_object_or_404(Profile, user=request.user)
     return render(request, 'profile/view_profile.html', {'profile': profile})
+
+# Manage Team Members View
+@login_required
+def manage_team_members(request, team_id):
+    team = get_object_or_404(Team, id=team_id)
+    if request.method == 'POST':
+        form = TeamMemberForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Team member added successfully!')
+            return redirect('team_projects', team_id=team.id)
+    else:
+        form = TeamMemberForm(initial={'team': team})
+    return render(request, 'projects/manage_team_members.html', {'form': form, 'team': team})
+
+# Generate Report View
+@login_required
+def generate_report(request, project_id):
+    project = get_object_or_404(Project, id=project_id)
+    tasks = Task.objects.filter(project=project)
+    report_content = generate_report_content(project, tasks)
+    ProjectReport.objects.create(project=project, content=report_content)
+    messages.success(request, 'Report generated successfully!')
+    return redirect('project_detail', project_id=project.id)
+
+def generate_report_content(project, tasks):
+    # Generate report content (e.g., in HTML or plain text format)
+    content = f"Report for project: {project.name}\n\n"
+    for task in tasks:
+        content += f"Task: {task.title}, Assigned to: {task.assigned_to.username}, Due date: {task.due_date}\n"
+    return content
+
+# Member Progress View
+@login_required
+def member_progress(request):
+    tasks = Task.objects.filter(assigned_to=request.user)
+    return render(request, 'projects/member_progress.html', {'tasks': tasks})
+
+# Send Notification Function
+def send_notification(user, message):
+    Notification.objects.create(user=user, message=message)

@@ -1,17 +1,30 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ task.title }} - Task Detail</title>
-</head>
-<body>
-    <h1>{{ task.title }}</h1>
-    <p>{{ task.description }}</p>
-    <p><strong>Assigned to:</strong> {{ task.assigned_to.username }}</p>
-    <p><strong>Start Date:</strong> {{ task.start_date }}</p>
-    <p><strong>Due Date:</strong> {{ task.due_date }}</p>
+<!-- filepath: /c:/Users/paulx/Python Project/Project Management App/projects/templates/projects/task_detail.html -->
+{% extends 'base.html' %}
 
-    <a href="{% url 'project_detail' task.project.id %}">Back to Project</a>
-</body>
-</html>
+{% load static %}
+
+{% block title %}{{ task.title }} - Task Detail{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/task_detail.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2 class="text-center">{{ task.title }}</h2>
+            <p class="text-center">{{ task.description }}</p>
+            <p class="text-center"><strong>Assigned to:</strong> {{ task.assigned_to.username }}</p>
+            <p class="text-center"><strong>Start Date:</strong> {{ task.start_date }}</p>
+            <p class="text-center"><strong>Due Date:</strong> {{ task.due_date }}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col text-center">
+            <a href="{% url 'project_detail' task.project.id %}" class="btn btn-secondary">Back to Project</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

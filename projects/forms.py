@@ -111,10 +111,11 @@ class ProfileForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        user = kwargs.get('instance').user  # Access the user instance
+        user = kwargs.get('instance').user if kwargs.get('instance') else None  # Ensure 'instance' exists
         super().__init__(*args, **kwargs)
-        self.fields['first_name'].initial = user.first_name
-        self.fields['last_name'].initial = user.last_name
+        if user:
+            self.fields['first_name'].initial = user.first_name
+            self.fields['last_name'].initial = user.last_name
 
     def save(self, commit=True):
         profile = super().save(commit=False)

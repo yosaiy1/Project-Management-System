@@ -96,8 +96,13 @@ def project_create(request):
 def team_projects(request, team_id=None):
     if team_id:
         team = get_object_or_404(Team, id=team_id)
+        # Ensure the user is a member of the team
+        if not TeamMember.objects.filter(user=request.user, team=team).exists():
+            messages.error(request, "You are not a member of this team.")
+            return redirect('homepage')
         projects = Project.objects.filter(team=team)
     else:
+        # Default behavior: show all projects if no specific team is selected
         team = None
         projects = Project.objects.all()
     
@@ -105,6 +110,7 @@ def team_projects(request, team_id=None):
         'team': team,
         'projects': projects
     })
+
 
 # Project Detail View
 @login_required

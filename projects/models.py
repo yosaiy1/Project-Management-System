@@ -40,14 +40,22 @@ class Profile(models.Model):
     def __str__(self):
         return f"Profile of {self.user.username}"
 
-# Team Model
 def get_default_owner():
-    return User.objects.first()  # Or a specific user
+    return User.objects.first()  # This will return the first User or None if no users exist
 
 class Team(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField()
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_teams', default=get_default_owner)
+    owner = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='owned_teams', 
+        default=get_default_owner,  # Using the default function to set the owner
+        null=True,  # Allowing null temporarily
+    )
+
+    def __str__(self):
+        return self.name
 
 # TeamMember Model
 class TeamMember(models.Model):

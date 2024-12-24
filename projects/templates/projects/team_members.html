@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Team Members{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/team_members.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Current Team Members for {{ team.name }}</h2>
+
+    <!-- Button to Manage Team Members -->
+    <a href="{% url 'manage_team_members' team.id %}" class="btn btn-warning mb-4">Manage Team Members</a>
+
+    <!-- Team Members List -->
+    {% if no_members %}
+        <p>No members in this team yet.</p>
+    {% else %}
+        {% if members %}
+            <ul class="list-group">
+                {% for member in members %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ member.user.username }}</span>
+
+                        <!-- Remove Member Form -->
+                        <form method="post" action="{% url 'remove_team_member' team.id member.id %}" class="mb-0">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

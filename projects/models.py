@@ -41,16 +41,13 @@ class Profile(models.Model):
         return f"Profile of {self.user.username}"
 
 # Team Model
+def get_default_owner():
+    return User.objects.first()  # Or a specific user
+
 class Team(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField()
-
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        verbose_name = "Team"
-        verbose_name_plural = "Teams"
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_teams', default=get_default_owner)
 
 # TeamMember Model
 class TeamMember(models.Model):
@@ -58,7 +55,9 @@ class TeamMember(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='teams')
 
     class Meta:
-        unique_together = ('team', 'user')  # Prevent duplicates
+        constraints = [
+            models.UniqueConstraint(fields=['team', 'user'], name='unique_team_member')
+        ]
 
     def __str__(self):
         return f"{self.user.username} - {self.team.name}"
@@ -72,7 +71,9 @@ class Project(models.Model):
     end_date = models.DateField()
 
     class Meta:
-        unique_together = ('name', 'team')  # Prevent duplicate project names within the same team
+        constraints = [
+            models.UniqueConstraint(fields=['name', 'team'], name='unique_project_name_in_team')
+        ]
 
     def __str__(self):
         return self.name
@@ -93,7 +94,9 @@ class Task(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='todo')
 
     class Meta:
-        unique_together = ('project', 'title')  # Prevent duplicate task titles within the same project
+        constraints = [
+            models.UniqueConstraint(fields=['project', 'title'], name='unique_task_title_in_project')
+        ]
 
     def __str__(self):
         return self.title
@@ -106,7 +109,9 @@ class File(models.Model):
     file = models.FileField(upload_to='files/')
 
     class Meta:
-        unique_together = ('task', 'file_name')  # Prevent duplicate file names for the same task
+        constraints = [
+            models.UniqueConstraint(fields=['task', 'file_name'], name='unique_file_name_in_task')
+        ]
 
     def __str__(self):
         return self.file_name
@@ -117,9 +122,6 @@ class Notification(models.Model):
     message = models.TextField()
     date_sent = models.DateTimeField(auto_now_add=True)
     read = models.BooleanField(default=False)
-
-    class Meta:
-        unique_together = ('user', 'message')  # Prevent duplicate notifications
 
     def __str__(self):
         return f"Notification for {self.user.username}"

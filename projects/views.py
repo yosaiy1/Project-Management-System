@@ -5,6 +5,7 @@ from django.contrib.auth import login, authenticate, logout, update_session_auth
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_protect
 from .models import Team, Project, Task, Profile, Notification, ProjectReport, TeamMember, User
 from .forms import ProjectForm, TaskForm, CustomUserCreationForm, CustomLoginForm, ProfileForm, TeamMemberForm
 import json
@@ -12,10 +13,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Helper function to send notifications
+def send_notification(user, message):
+    Notification.objects.create(user=user, message=message, read=False)
+
 # Homepage View
 @login_required
 def homepage(request):
-    # Get the TeamMember instance for the logged-in user
     try:
         team_member = TeamMember.objects.get(user=request.user)
         teams = Team.objects.filter(members=team_member)
@@ -28,8 +32,8 @@ def homepage(request):
     inprogress_tasks = Task.objects.filter(status='inprogress')
     done_tasks = Task.objects.filter(status='done')
 
-    # Fetch unread notifications for the dropdown
     unread_notifications = Notification.objects.filter(user=request.user, read=False)
+    unread_notifications_count = unread_notifications.count()
 
     return render(request, 'projects/homepage.html', {
         'projects': projects,
@@ -37,9 +41,9 @@ def homepage(request):
         'inprogress_tasks': inprogress_tasks,
         'done_tasks': done_tasks,
         'unread_notifications': unread_notifications,
+        'unread_notifications_count': unread_notifications_count,
         'team': team,
     })
-
 
 @login_required
 def settings_view(request):
@@ -53,6 +57,7 @@ def change_password(request):
             user = form.save()
             update_session_auth_hash(request, user)  # Important!
             messages.success(request, 'Your password was successfully updated!')
+            send_notification(request.user, "Your password was changed successfully.")
             return redirect('settings')
         else:
             messages.error(request, 'Please correct the error below.')
@@ -72,7 +77,8 @@ def project_create(request):
             if Project.objects.filter(name=project_name).exists():
                 messages.error(request, 'A project with this name already exists.')
             else:
-                form.save()
+                project = form.save()
+                send_notification(request.user, f"Project '{project.name}' created successfully.")
                 messages.success(request, 'Project created successfully!')
                 return redirect('homepage')
         else:
@@ -138,7 +144,7 @@ def task_create(request, project_id):
 
     return render(request, 'projects/task_form.html', {'form': form, 'project': project})
 
-# Task Update View (to send notifications when status is updated)
+# Task Update View
 @login_required
 def task_update(request, project_id, task_id):
     task = get_object_or_404(Task, id=task_id, project_id=project_id)
@@ -164,6 +170,7 @@ def task_delete(request, project_id, task_id):
     if request.method == "POST":
         task.delete()
         messages.success(request, 'Task deleted successfully!')
+        send_notification(request.user, f"Task '{task.title}' was deleted.")
         return redirect('project_detail', project_id=project_id)
     return render(request, 'projects/task_delete_confirm.html', {'task': task, 'project_id': project_id})
 
@@ -239,6 +246,7 @@ def update_profile(request):
             request.user.last_name = form.cleaned_data['last_name']
             request.user.save()
             messages.success(request, 'Profile updated successfully!')
+            send_notification(request.user, "Your profile has been updated.")
             return redirect('view_profile')
         else:
             messages.error(request, 'There was an error with your profile update.')
@@ -256,6 +264,7 @@ def delete_account(request):
     if request.method == 'POST':
         request.user.delete()
         messages.success(request, 'Account deleted successfully!')
+        send_notification(request.user, "Your account was deleted.")
         return redirect('register')
     return render(request, 'profile/delete_account.html')
 
@@ -265,23 +274,62 @@ def view_profile(request):
     profile = get_object_or_404(Profile, user=request.user)
     return render(request, 'profile/view_profile.html', {'profile': profile})
 
-# Manage Team Members View
 @login_required
 def manage_team_members(request, team_id):
     team = get_object_or_404(Team, id=team_id)
+
+    # Check if the user is the owner or has permission to manage the team members
+    if request.user != team.owner:
+        messages.error(request, "You don't have permission to manage this team's members.")
+        return redirect('team_detail', team_id=team.id)
+
     if request.method == 'POST':
         form = TeamMemberForm(request.POST)
         if form.is_valid():
-            team_member = form.save(commit=False)
-            team_member.team = team
-            team_member.save()
-            messages.success(request, 'Team member added successfully!')
-            return redirect('manage_team_members', team_id=team.id)
+            user = form.cleaned_data['user']
+            
+            # Check if the user is already a member of the team
+            if TeamMember.objects.filter(team=team, user=user).exists():
+                messages.error(request, f"{user.username} is already a member of this team.")
+            else:
+                # Add the new member
+                team_member = form.save(commit=False)
+                team_member.team = team
+                team_member.save()
+                messages.success(request, 'Team member added successfully!')
+                send_notification(request.user, f"New team member added to team '{team.name}'")
+                return redirect('manage_team_members', team_id=team.id)
+        else:
+            messages.error(request, 'There was an error with your submission.')
     else:
         form = TeamMemberForm(initial={'team': team})
-    return render(request, 'projects/manage_team_members.html', {'form': form, 'team': team})
 
-# Generate Report View
+    members = TeamMember.objects.filter(team=team)  # List the current team members
+    return render(request, 'projects/manage_team_members.html', {
+        'form': form,
+        'team': team,
+        'members': members
+    })
+
+# Remove Team Member View
+@login_required
+def remove_team_member(request, team_id, member_id):
+    team = get_object_or_404(Team, id=team_id)
+    member = get_object_or_404(TeamMember, id=member_id, team=team)
+
+    # Ensure the logged-in user has permission to remove team members (e.g., only team owner can remove members)
+    if request.user != team.owner:
+        messages.error(request, "You don't have permission to remove this member.")
+        return redirect('team_members', team_id=team.id)
+
+    # Remove the team member
+    member.delete()
+    messages.success(request, f"Member {member.user.username} has been removed from the team.")
+    send_notification(request.user, f"Member {member.user.username} was removed from team '{team.name}'")
+    return redirect('team_members', team_id=team.id)
+
+
+# Project Report Generation
 @login_required
 def generate_report(request, project_id):
     project = get_object_or_404(Project, id=project_id)
@@ -289,10 +337,10 @@ def generate_report(request, project_id):
     report_content = generate_report_content(project, tasks)
     ProjectReport.objects.create(project=project, content=report_content)
     messages.success(request, 'Report generated successfully!')
+    send_notification(request.user, f"Report for project '{project.name}' has been generated.")
     return redirect('project_detail', project_id=project.id)
 
 def generate_report_content(project, tasks):
-    # Generate report content (e.g., in HTML or plain text format)
     content = f"Report for project: {project.name}\n\n"
     for task in tasks:
         content += f"Task: {task.title}, Assigned to: {task.assigned_to.username}, Due date: {task.due_date}\n"
@@ -308,15 +356,29 @@ def member_progress(request):
 def send_notification(user, message):
     Notification.objects.create(user=user, message=message, read=False)
 
-# Clear all notifications
-@csrf_exempt
+# Clear all notifications - expects a POST request
+@csrf_protect  # Ensure CSRF protection in production
 def clear_all_notifications(request):
     if request.method == 'POST':
-        user = request.user
-        notifications = Notification.objects.filter(user=user, read=False)
-        notifications.update(read=True)  # Mark all notifications as read
-        return JsonResponse({'status': 'success'})
-    return JsonResponse({'status': 'error'}, status=400)
+        try:
+            # Fetch notifications for the logged-in user and delete them
+            notifications = Notification.objects.filter(user=request.user)
+            notifications.delete()
+            
+            # Add a success message to be displayed to the user
+            messages.success(request, 'All notifications cleared.')
+            
+            # Redirect the user back to the homepage (or another relevant page)
+            return redirect('homepage')  # Adjust this to where you'd like to redirect
+        except Exception as e:
+            # Add an error message if something goes wrong
+            messages.error(request, f"Error clearing notifications: {str(e)}")
+            
+            # Redirect back to the homepage or relevant page
+            return redirect('homepage')  # Adjust as needed
+    else:
+        # Return an error response if the request method is not POST
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 # Update Task Status View
 @csrf_exempt
@@ -328,6 +390,7 @@ def update_task_status(request, task_id):
             task = Task.objects.get(id=task_id)
             task.status = new_status
             task.save()
+            send_notification(task.assigned_to, f"Task '{task.title}' status updated to {new_status}")
             logger.info(f"Task {task_id} status updated to {new_status}")
             return JsonResponse({'status': 'success'})
         except Task.DoesNotExist:
@@ -355,10 +418,13 @@ def team_detail(request, team_id):
 def team_members(request, team_id):
     team = get_object_or_404(Team, id=team_id)
     members = TeamMember.objects.filter(team=team)
+
     return render(request, 'projects/team_members.html', {
         'team': team,
-        'members': members
+        'members': members,
+        'no_members': not members.exists()  # Flag to show message if no members exist
     })
+
 
 @login_required
 def progress(request):

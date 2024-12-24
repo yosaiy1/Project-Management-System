@@ -1,4 +1,3 @@
-<!-- filepath: /c:/Users/paulx/Python Project/Project Management App/projects/templates/projects/manage_team_members.html -->
 {% extends 'base.html' %}
 {% load static %}
 
@@ -11,23 +10,44 @@
 {% block content %}
 <div class="container mt-4">
     <h2 class="mb-4">Manage Team Members for {{ team.name }}</h2>
+
+    <!-- Add New Team Member Form -->
     <form method="post" class="mb-4">
         {% csrf_token %}
         {{ form.as_p }}
         <button type="submit" class="btn btn-primary">Add Member</button>
     </form>
+
+    <!-- Success Message for Adding a Member -->
+    {% if messages %}
+        <div class="alert alert-success">
+            {% for message in messages %}
+                <p>{{ message }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+
     <hr>
+
+    <!-- Display Current Team Members -->
     <h3>Current Team Members</h3>
+    {% if team.teammember_set.all %}
     <ul class="list-group">
         {% for member in team.teammember_set.all %}
         <li class="list-group-item d-flex justify-content-between align-items-center">
-            {{ member.user.username }}
-            <form method="post" action="{% url 'remove_team_member' team.id member.id %}">
+            <!-- Display member username and a "Remove" button -->
+            <span>{{ member.user.username }}</span>
+
+            <!-- Remove Team Member Form -->
+            <form method="post" action="{% url 'remove_team_member' team.id member.id %}" class="ml-3">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-danger btn-sm">Remove</button>
             </form>
         </li>
         {% endfor %}
     </ul>
+    {% else %}
+    <p>No members found in this team.</p>
+    {% endif %}
 </div>
 {% endblock %}

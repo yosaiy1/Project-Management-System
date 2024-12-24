@@ -16,8 +16,9 @@ urlpatterns = [
     path('teams/', views.team_list, name='team_list'),  # Team list view
     path('teams/<int:team_id>/', views.team_detail, name='team_detail'),  # Team detail view
     path('teams/<int:team_id>/projects/', views.team_projects, name='team_projects'),
-    path('teams/<int:team_id>/members/view/', views.team_members, name='team_members'),  # Clarified purpose
-    path('teams/<int:team_id>/members/manage/', views.manage_team_members, name='manage_team_members'),  # Clarified purpose
+    path('teams/<int:team_id>/members/view/', views.team_members, name='team_members'),  # View members
+    path('teams/<int:team_id>/members/manage/', views.manage_team_members, name='manage_team_members'),  # Manage members
+    path('teams/<int:team_id>/remove_member/<int:member_id>/', views.remove_team_member, name='remove_team_member'),  # Remove member
 
     # User authentication URLs
     path('login/', views.login_view, name='login'),
@@ -40,7 +41,6 @@ urlpatterns = [
     path('update_task_status/<int:task_id>/', views.update_task_status, name='update_task_status'),
 
     path('notifications/clear_all/', views.clear_all_notifications, name='clear_notifications'),
-
 
     # Settings URLs
     path('settings/', views.settings_view, name='settings'),

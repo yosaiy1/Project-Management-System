@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Theme Management
     function initializeTheme() {
         const themeToggle = document.getElementById('themeToggle');
-        let currentTheme = localStorage.getItem('theme') || 'light';
+        const currentTheme = localStorage.getItem('theme') || 'light';
         document.body.classList.add(`theme-${currentTheme}`);
 
         if (themeToggle) {
@@ -10,7 +10,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 const newTheme = document.body.classList.contains('theme-light') ? 'dark' : 'light';
                 document.body.classList.replace(`theme-${currentTheme}`, `theme-${newTheme}`);
                 localStorage.setItem('theme', newTheme);
-                currentTheme = newTheme; // Update the currentTheme to the new theme
 
                 // Update theme toggle icon
                 const icon = themeToggle.querySelector('i');
@@ -29,11 +28,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const sidebarToggle = document.getElementById('sidebarToggle');
         const sidebar = document.getElementById('sidebar');
         const MOBILE_BREAKPOINT = 768;
-        
+
         let isSidebarExpanded = localStorage.getItem('sidebarExpanded') === 'true';
         let isMobile = window.innerWidth < MOBILE_BREAKPOINT;
-        
-        function updateSidebarState(expanded) {
+
+        // Update sidebar state
+        const updateSidebarState = (expanded) => {
             isSidebarExpanded = expanded;
             document.body.classList.toggle('sidebar-expanded', expanded);
             sidebar?.classList.toggle('show', expanded);
@@ -42,43 +42,31 @@ document.addEventListener('DOMContentLoaded', function () {
             requestAnimationFrame(() => {
                 sidebar?.classList.add('sidebar-transition');
             });
-        }
+        };
 
-        function initializeBasedOnScreenSize() {
-            isMobile = window.innerWidth < MOBILE_BREAKPOINT;
-            if (isMobile) {
-                updateSidebarState(false);  // Collapse sidebar on mobile
-            } else {
-                updateSidebarState(isSidebarExpanded);  // Retain sidebar state on desktop
-            }
-        }
-
-        function handleSidebarToggle(e) {
-            e?.preventDefault();
-            e?.stopPropagation();
-            updateSidebarState(!isSidebarExpanded);
-        }
-
-        function handleOutsideClick(e) {
-            if (isMobile && isSidebarExpanded && !sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
-                updateSidebarState(false);  // Collapse sidebar when clicking outside
-            }
-        }
-
-        function handleResize() {
+        // Adjust sidebar state on screen resize
+        const handleResize = () => {
             const wasMobile = isMobile;
             isMobile = window.innerWidth < MOBILE_BREAKPOINT;
 
             if (wasMobile !== isMobile) {
-                if (isMobile) {
-                    updateSidebarState(false);  // Collapse sidebar on mobile
-                } else {
-                    updateSidebarState(localStorage.getItem('sidebarExpanded') !== 'false');  // Retain state on desktop
-                }
+                updateSidebarState(isMobile ? false : isSidebarExpanded);
             }
-        }
+        };
 
-        function initializeEventListeners() {
+        const handleSidebarToggle = (e) => {
+            e?.preventDefault();
+            e?.stopPropagation();
+            updateSidebarState(!isSidebarExpanded);
+        };
+
+        const handleOutsideClick = (e) => {
+            if (isMobile && isSidebarExpanded && !sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
+                updateSidebarState(false);
+            }
+        };
+
+        const initializeEventListeners = () => {
             if (sidebarToggle && sidebar) {
                 sidebarToggle.addEventListener('click', handleSidebarToggle);
                 document.addEventListener('click', handleOutsideClick);
@@ -87,19 +75,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 window.addEventListener('resize', () => {
                     clearTimeout(resizeTimer);
                     resizeTimer = setTimeout(handleResize, 250);
-
                 });
 
                 document.addEventListener('keydown', (e) => {
                     if (e.key === 'Escape' && isMobile && isSidebarExpanded) {
-                        updateSidebarState(false);  // Close sidebar on Escape
+                        updateSidebarState(false); // Close sidebar on Escape
                     }
                 });
             }
-        }
+        };
 
-        initializeBasedOnScreenSize();
         initializeEventListeners();
+        handleResize();
     }
 
     // Kanban Board Drag-and-Drop
@@ -113,11 +100,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     animation: 150,
                     ghostClass: 'sortable-ghost',
                     dragClass: 'sortable-drag',
-                    onStart: (evt) => {
+                    onStart(evt) {
                         evt.item.classList.add('dragging');
                         document.body.classList.add('dragging-active');
                     },
-                    onEnd: (evt) => {
+                    onEnd(evt) {
                         evt.item.classList.remove('dragging');
                         document.body.classList.remove('dragging-active');
                         const taskId = evt.item.getAttribute('data-id');
@@ -135,7 +122,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!taskElement) return;
 
         taskElement.classList.add('updating');
-
         try {
             const response = await fetch(`/projects/update_task_status/${taskId}/`, {
                 method: 'POST',
@@ -147,18 +133,21 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             if (!response.ok) throw new Error('Failed to update task status');
-
             showNotification('Task status updated successfully', 'success');
         } catch (error) {
             console.error('Error:', error);
             showNotification('Failed to update task status', 'error');
-            // Revert the task to its original position
-            const originalList = document.getElementById(taskElement.dataset.originalStatus);
-            if (originalList) {
-                originalList.appendChild(taskElement);
-            }
+            revertTaskPosition(taskElement); // Revert task to original position on error
         } finally {
             taskElement.classList.remove('updating');
+        }
+    }
+
+    // Revert Task Position
+    function revertTaskPosition(taskElement) {
+        const originalList = document.getElementById(taskElement.dataset.originalStatus);
+        if (originalList) {
+            originalList.appendChild(taskElement);
         }
     }
 
@@ -177,7 +166,6 @@ document.addEventListener('DOMContentLoaded', function () {
             ${message}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         `;
-
         container.appendChild(notification);
 
         const bsAlert = new bootstrap.Alert(notification);
@@ -275,29 +263,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (parts.length === 2) return parts.pop().split(';').shift();
     }
 
-    // Fetch unread notification count dynamically
-    async function getUnreadNotificationCount() {
-        try {
-            const response = await fetch('/notifications/get_unread_count');
-            if (response.ok) {
-                const data = await response.json();
-                updateNotificationCount(data.unread_count);
-            }
-        } catch (error) {
-            console.error('Error fetching unread notifications:', error);
-        }
-    }
-
-    // Attach event listener for the "Clear all" button
-    const clearBtn = document.querySelector('.clear-all-notifications');
-    if (clearBtn) clearBtn.addEventListener('click', clearNotifications);
-
-    // Start fetching notifications
-    fetchNotifications();
-
-    // Fetch and update the unread notification count
-    getUnreadNotificationCount();
-
     // Enhanced Search Functionality
     function initializeSearch() {
         const searchInput = document.querySelector('.search-wrapper input');
@@ -310,18 +275,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 clearTimeout(debounceTimer);
                 const searchTerm = e.target.value.trim();
 
-                if (searchTerm.length > 0) {
-                    searchWrapper.classList.add('is-searching');
-                } else {
-                    searchWrapper.classList.remove('is-searching');
-                }
+                searchWrapper.classList.toggle('is-searching', searchTerm.length > 0);
 
                 if (searchTerm.length > 2) {
                     debounceTimer = setTimeout(() => performSearch(searchTerm), 300);
                 }
             });
 
-            // Clear search on escape
             searchInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
                     searchInput.value = '';
@@ -331,7 +291,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // Perform Search
     async function performSearch(term) {
         const searchWrapper = document.querySelector('.search-wrapper');
         try {
@@ -353,4 +312,7 @@ document.addEventListener('DOMContentLoaded', function () {
     initializeSidebar();
     initializeKanban();
     initializeSearch();
+
+    // Fetch and update notifications
+    fetchNotifications();
 });

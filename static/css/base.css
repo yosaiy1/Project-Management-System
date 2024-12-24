@@ -19,6 +19,9 @@ body {
   background: linear-gradient(135deg, #f6f7ff 0%, #f0f9ff 100%);
   min-height: 100vh;
   padding-top: var(--header-height);
+  display: flex;
+  flex-direction: column;
+  margin: 0;
 }
 
 /* Glass morphism components */
@@ -56,10 +59,13 @@ body {
 
 /* Main content area */
 .main-content {
-  min-height: calc(100vh - var(--header-height));
+  min-height: 0; /* Allow content to take only required space */
+  flex-grow: 1; /* Makes the content area take the remaining space */
   transition: margin-left 0.3s ease-in-out;
   margin-left: 0;
   padding-top: 1rem;
+  overflow-y: auto; /* Allows scrolling if content overflows */
+  padding-bottom: 60px; /* Space for the footer */
 }
 
 /* Desktop sidebar behavior */
@@ -67,7 +73,7 @@ body {
   .sidebar-expanded .main-content {
     margin-left: 280px;
   }
-  
+
   .glass-sidebar {
     box-shadow: var(--shadow);
   }
@@ -75,6 +81,7 @@ body {
 
 /* Mobile sidebar behavior */
 @media (max-width: 768px) {
+  /* Sidebar overlay background on mobile */
   .sidebar-expanded::before {
     content: '';
     position: fixed;
@@ -86,12 +93,30 @@ body {
     z-index: 1025;
   }
 
+  /* Adjust sidebar width for mobile */
   .glass-sidebar {
     width: 250px;
   }
 
+  /* Main content should take full width on mobile */
   .sidebar-expanded .main-content {
     margin-left: 0;
+  }
+
+  /* Adjust header height and padding on small screens */
+  .glass-nav {
+    height: 60px;
+  }
+
+  /* Smaller margins and padding for mobile screens */
+  .main-content {
+    padding-top: 0.5rem;
+    padding-bottom: 10px;
+  }
+  
+  /* Footer adjustment on mobile */
+  .glass-footer {
+    padding: 0.8rem;
   }
 }
 
@@ -264,7 +289,13 @@ body {
   background: var(--glass-bg);
   backdrop-filter: blur(12px);
   border-top: 1px solid var(--glass-border);
-  margin-top: auto;
+  padding: 1rem;
+  width: 100%;
+  position: relative;
+  z-index: 1040;
+  box-shadow: var(--shadow);
+  margin-top: auto; /* Ensures footer is always at the bottom */
+  position: sticky; /* Keeps it visible at the bottom */
 }
 
 /* Animations */

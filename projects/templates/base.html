@@ -6,18 +6,28 @@
     <meta name="csrf-token" content="{{ csrf_token }}">
     <title>{% block title %}Project Management App{% endblock %}</title>
     {% load static %}
+    
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- Custom Styles -->
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    
     {% block extra_css %}{% endblock %}
 </head>
 <body class="d-flex flex-column min-vh-100 theme-light">
+    
     <!-- Header -->
     <header class="navbar glass-nav fixed-top border-bottom">
         <div class="container-fluid px-4">
             <div class="d-flex align-items-center gap-3">
-                <button id="sidebarToggle" class="btn btn-icon rounded-circle p-2 hover-translate">
+                <button id="sidebarToggle" class="btn btn-icon rounded-circle p-2 hover-translate" aria-label="Toggle Sidebar">
                     <i class="bi bi-list fs-4"></i>
                 </button>
                 <a class="navbar-brand d-flex align-items-center gap-2 hover-translate" href="{% url 'homepage' %}">
@@ -27,75 +37,74 @@
             </div>
 
             <div class="d-flex align-items-center gap-4">
+                
+                <!-- Search Bar (visible only on medium screens and up) -->
                 <div class="search-wrapper d-none d-md-flex align-items-center glass-card px-3 py-2">
-                    <i class="bi bi-search text-muted search-icon"></i>
-                    <input class="form-control border-0 bg-transparent shadow-none ms-2 search-input" type="search" placeholder="Search projects...">
-                    <div class="search-spinner spinner-border spinner-border-sm text-primary ms-2 d-none" role="status">
+                    <i class="bi bi-search text-muted search-icon" aria-hidden="true"></i>
+                    <input class="form-control border-0 bg-transparent shadow-none ms-2 search-input" type="search" placeholder="Search projects..." aria-label="Search projects">
+                    <div class="search-spinner spinner-border spinner-border-sm text-primary ms-2 d-none" role="status" aria-hidden="true">
                         <span class="visually-hidden">Searching...</span>
                     </div>
                 </div>
 
                 <div class="d-flex align-items-center gap-3">
-                    <!-- Quick Actions -->
-                    <button class="btn btn-icon rounded-circle p-2 hover-translate">
+                    
+                    <!-- Quick Actions Button -->
+                    <button class="btn btn-icon rounded-circle p-2 hover-translate" aria-label="Quick Actions">
                         <i class="bi bi-plus-lg fs-5"></i>
                     </button>
 
-                    <!-- Theme Toggle -->
-                    <button id="themeToggle" class="btn btn-icon rounded-circle p-2 hover-translate">
+                    <!-- Theme Toggle Button -->
+                    <button id="themeToggle" class="btn btn-icon rounded-circle p-2 hover-translate" aria-label="Toggle Theme">
                         <i class="bi bi-moon fs-5"></i>
                     </button>
 
-                   <!-- Notifications -->
-<div class="dropdown">
-    <button class="btn btn-icon rounded-circle p-2 hover-translate position-relative" data-bs-toggle="dropdown">
-        <i class="bi bi-bell fs-5"></i>
-        {% if unread_notifications_count > 0 %}
-            <span class="notification-badge">{{ unread_notifications_count }}</span>
-        {% endif %}
-    </button>
-    <div class="dropdown-menu dropdown-menu-end glass-card p-0 border-0 shadow-lg" style="width: 320px;">
-        <div class="p-3 border-bottom">
-            <div class="d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 fw-semibold">Notifications</h6>
-                <!-- Replace the link with a form to submit a POST request -->
-                <form action="{% url 'clear_notifications' %}" method="POST" style="display: inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="text-primary text-decoration-none small hover-translate btn btn-link p-0">
-                        Clear all
-                    </button>
-                </form>
-            </div>
-        </div>
-        <div class="notification-body" style="max-height: 360px; overflow-y: auto;">
-            {% for notification in unread_notifications %}
-                <a class="dropdown-item p-3 border-bottom {% if not notification.read %}unread{% endif %}">
-                    <div class="d-flex gap-3">
-                        <div class="notification-icon rounded-circle bg-primary bg-opacity-10 p-2">
-                            <i class="bi bi-bell text-primary"></i>
-                        </div>
-                        <div>
-                            <p class="mb-1 text-truncate">{{ notification.message }}</p>
-                            <small class="text-muted">{{ notification.date_sent|timesince }} ago</small>
+                    <!-- Notifications Dropdown -->
+                    <div class="dropdown">
+                        <button class="btn btn-icon rounded-circle p-2 hover-translate position-relative" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Notifications">
+                            <i class="bi bi-bell fs-5"></i>
+                            {% if unread_notifications_count > 0 %}
+                                <span class="notification-badge">{{ unread_notifications_count }}</span>
+                            {% endif %}
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end glass-card p-0 border-0 shadow-lg" style="width: 320px;" aria-labelledby="notificationsDropdown">
+                            <div class="p-3 border-bottom">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0 fw-semibold">Notifications</h6>
+                                    <form action="{% url 'clear_notifications' %}" method="POST" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="text-primary text-decoration-none small hover-translate btn btn-link p-0" aria-label="Clear all notifications">
+                                            Clear all
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="notification-body" style="max-height: 360px; overflow-y: auto;">
+                                {% for notification in unread_notifications %}
+                                    <a class="dropdown-item p-3 border-bottom {% if not notification.read %}unread{% endif %}">
+                                        <div class="d-flex gap-3">
+                                            <div class="notification-icon rounded-circle bg-primary bg-opacity-10 p-2">
+                                                <i class="bi bi-bell text-primary"></i>
+                                            </div>
+                                            <div>
+                                                <p class="mb-1 text-truncate">{{ notification.message }}</p>
+                                                <small class="text-muted">{{ notification.date_sent|timesince }} ago</small>
+                                            </div>
+                                        </div>
+                                    </a>
+                                {% empty %}
+                                    <div class="p-4 text-center text-muted">
+                                        <i class="bi bi-bell-slash fs-4 mb-2 d-block"></i>
+                                        <p class="mb-0 small">No notifications</p>
+                                    </div>
+                                {% endfor %}
+                            </div>
                         </div>
                     </div>
-                </a>
-            {% empty %}
-                <div class="p-4 text-center text-muted">
-                    <i class="bi bi-bell-slash fs-4 mb-2 d-block"></i>
-                    <p class="mb-0 small">No notifications</p>
-                </div>
-            {% endfor %}
-        </div>
-    </div>
-</div>
-
-
-
 
                     <!-- User Menu -->
                     <div class="dropdown">
-                        <button class="btn d-flex align-items-center gap-2 hover-translate" data-bs-toggle="dropdown">
+                        <button class="btn d-flex align-items-center gap-2 hover-translate" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             <div class="user-avatar rounded-circle overflow-hidden" style="width: 40px; height: 40px;">
                                 {% if user.profile.avatar %}
                                     <img src="{{ user.profile.avatar.url }}" alt="Profile" class="w-100 h-100 object-fit-cover">
@@ -149,6 +158,7 @@
         <div class="sidebar-content h-100 d-flex flex-column overflow-auto">
             <div class="p-4">
                 <div class="nav flex-column gap-2">
+                    <a href="{% url
                     <a href="{% url 'homepage' %}" class="nav-link d-flex align-items-center gap-3 p-3 rounded-3 {% if request.resolver_match.url_name == 'homepage' %}active{% endif %}">
                         <i class="bi bi-house-door fs-5"></i>
                         <span class="fw-medium">Dashboard</span>
@@ -195,16 +205,19 @@
     <!-- Main Content -->
     <main class="main-content bg-light">
         <div class="container-fluid p-4">
+            <!-- Alert Messages -->
             <div class="alert-container position-fixed top-0 end-0 p-3" style="z-index: 1050; margin-top: 80px;">
                 {% if messages %}
                     {% for message in messages %}
                         <div class="alert alert-{{ message.tags }} alert-dismissible fade show glass-card border-0 shadow-sm" role="alert">
                             {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
                     {% endfor %}
                 {% endif %}
             </div>
+
+            <!-- Content Block -->
             {% block content %}{% endblock %}
         </div>
     </main>

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>{% block title %}Project Management App{% endblock %}</title>
     {% load static %}
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -11,7 +12,7 @@
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
-<body class="d-flex flex-column min-vh-100">
+<body class="d-flex flex-column min-vh-100 theme-light">
     <!-- Header -->
     <header class="navbar glass-nav fixed-top border-bottom">
         <div class="container-fluid px-4">
@@ -27,8 +28,11 @@
 
             <div class="d-flex align-items-center gap-4">
                 <div class="search-wrapper d-none d-md-flex align-items-center glass-card px-3 py-2">
-                    <i class="bi bi-search text-muted"></i>
-                    <input class="form-control border-0 bg-transparent shadow-none ms-2" type="search" placeholder="Search projects...">
+                    <i class="bi bi-search text-muted search-icon"></i>
+                    <input class="form-control border-0 bg-transparent shadow-none ms-2 search-input" type="search" placeholder="Search projects...">
+                    <div class="search-spinner spinner-border spinner-border-sm text-primary ms-2 d-none" role="status">
+                        <span class="visually-hidden">Searching...</span>
+                    </div>
                 </div>
 
                 <div class="d-flex align-items-center gap-3">
@@ -37,19 +41,24 @@
                         <i class="bi bi-plus-lg fs-5"></i>
                     </button>
 
+                    <!-- Theme Toggle -->
+                    <button id="themeToggle" class="btn btn-icon rounded-circle p-2 hover-translate">
+                        <i class="bi bi-moon fs-5"></i>
+                    </button>
+
                     <!-- Notifications -->
                     <div class="dropdown">
                         <button class="btn btn-icon rounded-circle p-2 hover-translate position-relative" data-bs-toggle="dropdown">
                             <i class="bi bi-bell fs-5"></i>
-                            {% if unread_notifications_count > 0 %}
-                                <span class="notification-badge pulse"></span>
-                            {% endif %}
+                            <span class="notification-badge" style="display: {% if unread_notifications_count > 0 %}block{% else %}none{% endif %};">
+                                {{ unread_notifications_count }}
+                            </span>
                         </button>
                         <div class="dropdown-menu dropdown-menu-end glass-card p-0 border-0 shadow-lg" style="width: 320px;">
                             <div class="p-3 border-bottom">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <h6 class="mb-0 fw-semibold">Notifications</h6>
-                                    <a href="#" class="text-primary text-decoration-none small hover-translate">Clear all</a>
+                                    <a href="{% url 'clear_notifications' %}" class="text-primary text-decoration-none small hover-translate">Clear all</a>
                                 </div>
                             </div>
                             <div class="notification-body" style="max-height: 360px; overflow-y: auto;">
@@ -67,7 +76,7 @@
                                     </a>
                                 {% empty %}
                                     <div class="p-4 text-center text-muted">
-                                        <i class="bi bi-bell-slash fs-4 mb-2"></i>
+                                        <i class="bi bi-bell-slash fs-4 mb-2 d-block"></i>
                                         <p class="mb-0 small">No notifications</p>
                                     </div>
                                 {% endfor %}
@@ -78,11 +87,11 @@
                     <!-- User Menu -->
                     <div class="dropdown">
                         <button class="btn d-flex align-items-center gap-2 hover-translate" data-bs-toggle="dropdown">
-                            <div class="user-avatar rounded-circle overflow-hidden">
+                            <div class="user-avatar rounded-circle overflow-hidden" style="width: 40px; height: 40px;">
                                 {% if user.profile.avatar %}
                                     <img src="{{ user.profile.avatar.url }}" alt="Profile" class="w-100 h-100 object-fit-cover">
                                 {% else %}
-                                    <div class="avatar-placeholder d-flex align-items-center justify-content-center">
+                                    <div class="avatar-placeholder d-flex align-items-center justify-content-center h-100">
                                         {{ user.username|slice:":1"|upper }}
                                     </div>
                                 {% endif %}
@@ -92,11 +101,13 @@
                         </button>
                         <div class="dropdown-menu dropdown-menu-end glass-card border-0 shadow-lg p-2">
                             <div class="p-3 text-center border-bottom">
-                                <div class="user-avatar mx-auto mb-2">
+                                <div class="user-avatar mx-auto mb-2" style="width: 64px; height: 64px;">
                                     {% if user.profile.avatar %}
-                                        <img src="{{ user.profile.avatar.url }}" alt="Profile" class="rounded-circle">
+                                        <img src="{{ user.profile.avatar.url }}" alt="Profile" class="rounded-circle w-100 h-100 object-fit-cover">
                                     {% else %}
-                                        <div class="avatar-placeholder">{{ user.username|slice:":1"|upper }}</div>
+                                        <div class="avatar-placeholder d-flex align-items-center justify-content-center h-100">
+                                            {{ user.username|slice:":1"|upper }}
+                                        </div>
                                     {% endif %}
                                 </div>
                                 <h6 class="mb-1">{{ user.get_full_name }}</h6>
@@ -126,7 +137,7 @@
 
     <!-- Sidebar -->
     <nav id="sidebar" class="glass-sidebar">
-        <div class="sidebar-content h-100 d-flex flex-column">
+        <div class="sidebar-content h-100 d-flex flex-column overflow-auto">
             <div class="p-4">
                 <div class="nav flex-column gap-2">
                     <a href="{% url 'homepage' %}" class="nav-link d-flex align-items-center gap-3 p-3 rounded-3 {% if request.resolver_match.url_name == 'homepage' %}active{% endif %}">
@@ -144,7 +155,7 @@
                         </a>
                     {% endif %}
                     <a href="{% if team %}{% url 'team_members' team_id=team.id %}{% else %}#{% endif %}" 
-                    class="nav-link d-flex align-items-center gap-3 p-3 rounded-3 {% if request.resolver_match.url_name == 'team_members' %}active{% endif %}">
+                       class="nav-link d-flex align-items-center gap-3 p-3 rounded-3 {% if request.resolver_match.url_name == 'team_members' %}active{% endif %}">
                         <i class="bi bi-person-plus fs-5"></i>
                         <span class="fw-medium">Team Members</span>
                     </a>
@@ -161,11 +172,11 @@
                     <h6 class="text-muted mb-3">Quick Stats</h6>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Active Projects</span>
-                        <span class="fw-medium">12</span>
+                        <span class="fw-medium">{{ active_projects_count }}</span>
                     </div>
                     <div class="d-flex justify-content-between">
                         <span class="text-muted">Team Members</span>
-                        <span class="fw-medium">8</span>
+                        <span class="fw-medium">{{ team_members_count }}</span>
                     </div>
                 </div>
             </div>
@@ -175,16 +186,16 @@
     <!-- Main Content -->
     <main class="main-content bg-light">
         <div class="container-fluid p-4">
-            {% if messages %}
-                <div class="alert-container">
+            <div class="alert-container position-fixed top-0 end-0 p-3" style="z-index: 1050; margin-top: 80px;">
+                {% if messages %}
                     {% for message in messages %}
                         <div class="alert alert-{{ message.tags }} alert-dismissible fade show glass-card border-0 shadow-sm" role="alert">
                             {{ message }}
                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
                     {% endfor %}
-                </div>
-            {% endif %}
+                {% endif %}
+            </div>
             {% block content %}{% endblock %}
         </div>
     </main>

@@ -3,6 +3,9 @@ from django.db import models
 
 class User(AbstractUser):
     email = models.EmailField(unique=True)  # Enforce unique emails
+    
+    # Define if the user is an admin using the built-in `is_staff` field or a custom field
+    is_admin = models.BooleanField(default=False)  # Optional: you could also use is_staff or is_superuser
 
     groups = models.ManyToManyField(
         Group,
@@ -22,6 +25,9 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+    def is_admin(self):
+        return self.is_staff  # Alternatively, you could use `is_admin` as a custom admin flag
 
 # Profile Model
 class Profile(models.Model):

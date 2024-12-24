@@ -20,7 +20,6 @@ def homepage(request):
         team_member = TeamMember.objects.get(user=request.user)
         teams = Team.objects.filter(members=team_member)
     except TeamMember.DoesNotExist:
-        # Handle cases where the user is not part of any team
         teams = Team.objects.none()
 
     team = teams.first() if teams.exists() else None  # Use the first team or None
@@ -28,15 +27,17 @@ def homepage(request):
     todo_tasks = Task.objects.filter(status='todo')
     inprogress_tasks = Task.objects.filter(status='inprogress')
     done_tasks = Task.objects.filter(status='done')
-    unread_notifications_count = request.user.notifications.filter(read=False).count()
+
+    # Fetch unread notifications for the dropdown
+    unread_notifications = Notification.objects.filter(user=request.user, read=False)
 
     return render(request, 'projects/homepage.html', {
         'projects': projects,
         'todo_tasks': todo_tasks,
         'inprogress_tasks': inprogress_tasks,
         'done_tasks': done_tasks,
-        'unread_notifications_count': unread_notifications_count,
-        'team': team,  # Pass the first team (or None) for the sidebar
+        'unread_notifications': unread_notifications,
+        'team': team,
     })
 
 
@@ -132,29 +133,25 @@ def task_create(request, project_id):
                 return redirect('project_detail', project_id=project.id)
         else:
             messages.error(request, 'There was an error with your task submission.')
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f"{field}: {error}")
     else:
         form = TaskForm()
 
     return render(request, 'projects/task_form.html', {'form': form, 'project': project})
 
-# Task Update View
+# Task Update View (to send notifications when status is updated)
 @login_required
 def task_update(request, project_id, task_id):
     task = get_object_or_404(Task, id=task_id, project_id=project_id)
     if request.method == 'POST':
         form = TaskForm(request.POST, instance=task)
         if form.is_valid():
-            form.save()
+            updated_task = form.save()
+            if updated_task.status == 'done':
+                send_notification(updated_task.assigned_to, f"Task '{updated_task.title}' is marked as done.")
             messages.success(request, 'Task updated successfully!')
             return redirect('task_detail', project_id=project_id, task_id=task_id)
         else:
             messages.error(request, 'There was an error with your task update.')
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f"{field}: {error}")
     else:
         form = TaskForm(instance=task)
 
@@ -309,7 +306,17 @@ def member_progress(request):
 
 # Send Notification Function
 def send_notification(user, message):
-    Notification.objects.create(user=user, message=message)
+    Notification.objects.create(user=user, message=message, read=False)
+
+# Clear all notifications
+@csrf_exempt
+def clear_all_notifications(request):
+    if request.method == 'POST':
+        user = request.user
+        notifications = Notification.objects.filter(user=user, read=False)
+        notifications.update(read=True)  # Mark all notifications as read
+        return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'error'}, status=400)
 
 # Update Task Status View
 @csrf_exempt

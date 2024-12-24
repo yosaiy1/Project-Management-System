@@ -39,6 +39,9 @@ urlpatterns = [
     # Task status update
     path('update_task_status/<int:task_id>/', views.update_task_status, name='update_task_status'),
 
+    path('notifications/clear_all/', views.clear_all_notifications, name='clear_notifications'),
+
+
     # Settings URLs
     path('settings/', views.settings_view, name='settings'),
     path('settings/change-password/', views.change_password, name='change_password'),

@@ -6,13 +6,11 @@ from django import forms
 from django.forms.models import BaseInlineFormSet
 from .models import User, Team, TeamMember, Project, Task, File, Notification, ProjectReport, Profile
 
-# Inline for Profile Model
 class ProfileInline(admin.StackedInline):
     model = Profile
     can_delete = False
     verbose_name_plural = 'profiles'
 
-# Custom User Admin
 class CustomUserAdmin(BaseUserAdmin):
     add_form = UserCreationForm
     form = UserChangeForm
@@ -34,7 +32,6 @@ class CustomUserAdmin(BaseUserAdmin):
     )
 
     def delete_model(self, request, obj):
-        # Prevent deletion of a user if they are assigned to a task or team member
         if obj.tasks.exists() or obj.teams.exists():
             self.message_user(
                 request,
@@ -46,7 +43,6 @@ class CustomUserAdmin(BaseUserAdmin):
 
 admin.site.register(User, CustomUserAdmin)
 
-# Unique Team Member Inline FormSet
 class UniqueTeamMemberInlineFormSet(BaseInlineFormSet):
     def clean(self):
         super().clean()
@@ -59,18 +55,17 @@ class UniqueTeamMemberInlineFormSet(BaseInlineFormSet):
                 raise forms.ValidationError("Each user can only be added to the team once.")
             seen_users.add(user)
 
-# Inline admin for TeamMember
 class TeamMemberInline(admin.TabularInline):
     model = TeamMember
     formset = UniqueTeamMemberInlineFormSet
-    extra = 1  # Number of empty forms to display by default
+    extra = 1
     fields = ['user', 'team']
 
 @admin.register(Team)
 class TeamAdmin(admin.ModelAdmin):
     list_display = ('name', 'description')
-    inlines = [TeamMemberInline]  # Allow team members to be added inline
-    search_fields = ['name', 'description']  # Enable search functionality
+    inlines = [TeamMemberInline]
+    search_fields = ['name', 'description']
 
 @admin.register(TeamMember)
 class TeamMemberAdmin(admin.ModelAdmin):
@@ -80,23 +75,27 @@ class TeamMemberAdmin(admin.ModelAdmin):
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
     list_display = ('name', 'team', 'start_date', 'end_date')
-    search_fields = ['name', 'team__name']  # Enable search by project name and team name
+    search_fields = ['name', 'team__name']
+    list_filter = ('team', 'start_date', 'end_date')
 
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
-    list_display = ('title', 'project', 'assigned_to', 'start_date', 'due_date')
-    search_fields = ['title', 'project__name', 'assigned_to__username']  # Enable search by task title, project name, and assigned user
+    list_display = ('title', 'project', 'assigned_to', 'start_date', 'due_date', 'status')
+    search_fields = ['title', 'project__name', 'assigned_to__username']
+    list_filter = ('status', 'project', 'assigned_to')
 
 @admin.register(File)
 class FileAdmin(admin.ModelAdmin):
-    list_display = ('file_name', 'task', 'uploaded_by')
-    search_fields = ['file_name', 'task__title', 'uploaded_by__username']  # Enable search by file name, task title, and uploaded user
+    list_display = ('file_name', 'task', 'uploaded_by', 'created_at')
+    search_fields = ['file_name', 'task__title', 'uploaded_by__username']
+    list_filter = ('task', 'uploaded_by')
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
-    list_display = ('user', 'message', 'date_sent', 'read')
-    list_filter = ('read', 'date_sent')
+    list_display = ('user', 'message', 'created_at', 'read')  # Changed from date_sent
+    list_filter = ('read', 'created_at')  # Changed from date_sent
     search_fields = ['user__username', 'message']
+    ordering = ('-created_at',)  # Changed from date_sent
 
     @admin.action(description='Mark selected as read')
     def mark_as_read(self, request, queryset):
@@ -111,4 +110,5 @@ class NotificationAdmin(admin.ModelAdmin):
 @admin.register(ProjectReport)
 class ProjectReportAdmin(admin.ModelAdmin):
     list_display = ('project', 'generated_on')
-    search_fields = ['project__name']  # Enable search by project name
+    search_fields = ['project__name']
+    list_filter = ('project', 'generated_on')

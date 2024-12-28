@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import authenticate
-from .models import Project, Task, User, Profile, TeamMember
+from .models import Project, Task, User, Profile, TeamMember, File
 from django.core.exceptions import ValidationError
 
 # Project Form
@@ -145,3 +145,13 @@ class TeamMemberForm(forms.ModelForm):
         if TeamMember.objects.filter(team=team, user=user).exists():
             raise ValidationError("This user is already a member of the team.")
         return cleaned_data
+
+# File Form (for file sharing)
+class FileForm(forms.ModelForm):
+    class Meta:
+        model = File
+        fields = ['file_name', 'file']
+        widgets = {
+            'file_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'file': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        }

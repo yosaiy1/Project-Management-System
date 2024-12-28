@@ -1,29 +1,50 @@
 document.addEventListener('DOMContentLoaded', function () {
-    // Theme Management
+    // Utility Functions
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // Theme System
     function initializeTheme() {
         const themeToggle = document.getElementById('themeToggle');
         const currentTheme = localStorage.getItem('theme') || 'light';
-        document.body.classList.add(`theme-${currentTheme}`);
+        const icon = themeToggle?.querySelector('i');
 
-        if (themeToggle) {
-            themeToggle.addEventListener('click', () => {
-                const newTheme = document.body.classList.contains('theme-light') ? 'dark' : 'light';
-                document.body.classList.replace(`theme-${currentTheme}`, `theme-${newTheme}`);
-                localStorage.setItem('theme', newTheme);
-
-                // Update theme toggle icon
-                const icon = themeToggle.querySelector('i');
-                if (icon) {
-                    icon.classList.replace(
-                        newTheme === 'dark' ? 'bi-sun' : 'bi-moon',
-                        newTheme === 'dark' ? 'bi-moon' : 'bi-sun'
-                    );
-                }
-            });
+        function updateTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            document.body.classList.remove('theme-light', 'theme-dark');
+            document.body.classList.add(`theme-${theme}`);
+            localStorage.setItem('theme', theme);
+            
+            if (icon) {
+                icon.classList.remove('bi-sun', 'bi-moon');
+                icon.classList.add(theme === 'dark' ? 'bi-moon' : 'bi-sun');
+            }
         }
+
+        updateTheme(currentTheme);
+
+        themeToggle?.addEventListener('click', () => {
+            const newTheme = document.body.classList.contains('theme-light') ? 'dark' : 'light';
+            updateTheme(newTheme);
+        });
     }
 
-    // Sidebar Management
+    // Sidebar System
     function initializeSidebar() {
         const sidebarToggle = document.getElementById('sidebarToggle');
         const sidebar = document.getElementById('sidebar');
@@ -32,287 +53,221 @@ document.addEventListener('DOMContentLoaded', function () {
         let isSidebarExpanded = localStorage.getItem('sidebarExpanded') === 'true';
         let isMobile = window.innerWidth < MOBILE_BREAKPOINT;
 
-        // Update sidebar state
-        const updateSidebarState = (expanded) => {
+        function updateSidebarState(expanded) {
             isSidebarExpanded = expanded;
             document.body.classList.toggle('sidebar-expanded', expanded);
             sidebar?.classList.toggle('show', expanded);
             localStorage.setItem('sidebarExpanded', expanded);
+        }
 
-            requestAnimationFrame(() => {
-                sidebar?.classList.add('sidebar-transition');
-            });
-        };
+        updateSidebarState(isSidebarExpanded && !isMobile);
 
-        // Adjust sidebar state on screen resize
-        const handleResize = () => {
+        sidebarToggle?.addEventListener('click', (e) => {
+            e.preventDefault();
+            updateSidebarState(!isSidebarExpanded);
+        });
+
+        document.addEventListener('click', (e) => {
+            if (isMobile && isSidebarExpanded && 
+                !sidebar?.contains(e.target) && 
+                !sidebarToggle?.contains(e.target)) {
+                updateSidebarState(false);
+            }
+        });
+
+        window.addEventListener('resize', debounce(() => {
             const wasMobile = isMobile;
             isMobile = window.innerWidth < MOBILE_BREAKPOINT;
-
             if (wasMobile !== isMobile) {
                 updateSidebarState(isMobile ? false : isSidebarExpanded);
             }
-        };
+        }, 250));
 
-        const handleSidebarToggle = (e) => {
-            e?.preventDefault();
-            e?.stopPropagation();
-            updateSidebarState(!isSidebarExpanded);
-        };
-
-        const handleOutsideClick = (e) => {
-            if (isMobile && isSidebarExpanded && !sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isSidebarExpanded) {
                 updateSidebarState(false);
-            }
-        };
-
-        const initializeEventListeners = () => {
-            if (sidebarToggle && sidebar) {
-                sidebarToggle.addEventListener('click', handleSidebarToggle);
-                document.addEventListener('click', handleOutsideClick);
-
-                let resizeTimer;
-                window.addEventListener('resize', () => {
-                    clearTimeout(resizeTimer);
-                    resizeTimer = setTimeout(handleResize, 250);
-                });
-
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape' && isMobile && isSidebarExpanded) {
-                        updateSidebarState(false); // Close sidebar on Escape
-                    }
-                });
-            }
-        };
-
-        initializeEventListeners();
-        handleResize();
-    }
-
-    // Kanban Board Drag-and-Drop
-    function initializeKanban() {
-        const lists = ['todo', 'inprogress', 'done'].map(id => document.getElementById(id));
-
-        lists.forEach(list => {
-            if (list) {
-                new Sortable(list, {
-                    group: 'kanban',
-                    animation: 150,
-                    ghostClass: 'sortable-ghost',
-                    dragClass: 'sortable-drag',
-                    onStart(evt) {
-                        evt.item.classList.add('dragging');
-                        document.body.classList.add('dragging-active');
-                    },
-                    onEnd(evt) {
-                        evt.item.classList.remove('dragging');
-                        document.body.classList.remove('dragging-active');
-                        const taskId = evt.item.getAttribute('data-id');
-                        const newStatus = evt.to.id;
-                        updateTaskStatus(taskId, newStatus);
-                    }
-                });
             }
         });
     }
 
+    // Search System
+    function initializeSearch() {
+        const searchInput = document.querySelector('.search-wrapper input');
+        const searchResults = document.querySelector('.search-results');
+        const searchWrapper = document.querySelector('.search-wrapper');
+        let currentSearchTerm = '';
+
+        if (!searchInput || !searchResults) return;
+
+        const performSearch = debounce(async (term) => {
+            try {
+                searchWrapper?.classList.add('is-searching');
+                const response = await fetch(`/api/search?q=${encodeURIComponent(term)}`);
+                if (!response.ok) throw new Error('Search failed');
+
+                const results = await response.json();
+                if (term === currentSearchTerm) {
+                    updateSearchResults(results);
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                showNotification('Search failed', 'error');
+            } finally {
+                searchWrapper?.classList.remove('is-searching');
+            }
+        }, 300);
+
+        function updateSearchResults(results) {
+            searchResults.innerHTML = results.length ? 
+                results.map(result => `
+                    <a href="${result.url}" class="search-result-item">
+                        <div class="search-result-title">${result.title}</div>
+                        <div class="search-result-description">${result.description}</div>
+                    </a>
+                `).join('') :
+                '<div class="search-no-results">No results found</div>';
+        }
+
+        searchInput.addEventListener('input', (e) => {
+            currentSearchTerm = e.target.value.trim();
+            
+            searchWrapper.classList.toggle('is-searching', currentSearchTerm.length > 0);
+            searchResults.style.display = currentSearchTerm.length > 0 ? 'block' : 'none';
+
+            if (currentSearchTerm.length >= 2) {
+                performSearch(currentSearchTerm);
+            } else {
+                searchResults.innerHTML = '';
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!searchWrapper.contains(e.target)) {
+                searchResults.style.display = 'none';
+                searchWrapper.classList.remove('is-searching');
+            }
+        });
+
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                searchInput.value = '';
+                searchResults.style.display = 'none';
+                searchWrapper.classList.remove('is-searching');
+            }
+        });
+    }
+
+    // Notification System
+    function showNotification(message, type = 'info') {
+        const container = document.querySelector('.notification-container') || 
+            (() => {
+                const el = document.createElement('div');
+                el.className = 'notification-container';
+                document.body.appendChild(el);
+                return el;
+            })();
+
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type} fade-in`;
+        notification.innerHTML = `
+            <div class="notification-content">
+                <i class="bi ${type === 'success' ? 'bi-check-circle' : 
+                             type === 'error' ? 'bi-x-circle' : 
+                             'bi-info-circle'}"></i>
+                <span>${message}</span>
+            </div>
+            <button class="notification-close">×</button>
+        `;
+
+        container.appendChild(notification);
+
+        notification.querySelector('.notification-close').addEventListener('click', () => {
+            notification.remove();
+        });
+
+        setTimeout(() => {
+            notification.classList.add('fade-out');
+            setTimeout(() => notification.remove(), 300);
+        }, 5000);
+    }
+
+    // Kanban Board System
+    function initializeKanban() {
+        const lists = ['todo', 'inprogress', 'done'].map(id => document.getElementById(id));
+        
+        lists.forEach(list => {
+            if (!list) return;
+
+            new Sortable(list, {
+                group: 'kanban',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                handle: '.task-drag-handle',
+                filter: '.task-locked',
+                onStart(evt) {
+                    const item = evt.item;
+                    item.classList.add('dragging');
+                    item.dataset.originalStatus = evt.from.id;
+                    document.body.classList.add('dragging-active');
+                },
+                onEnd(evt) {
+                    const item = evt.item;
+                    item.classList.remove('dragging');
+                    document.body.classList.remove('dragging-active');
+
+                    if (evt.from.id !== evt.to.id) {
+                        const taskId = item.dataset.id;
+                        const newStatus = evt.to.id;
+                        updateTaskStatus(taskId, newStatus, evt.from.id);
+                    }
+                }
+            });
+        });
+    }
+
     // Task Status Update
-    async function updateTaskStatus(taskId, newStatus) {
+    async function updateTaskStatus(taskId, newStatus, originalStatus) {
         const taskElement = document.querySelector(`[data-id="${taskId}"]`);
         if (!taskElement) return;
 
         taskElement.classList.add('updating');
+
         try {
-            const response = await fetch(`/projects/update_task_status/${taskId}/`, {
+            const response = await fetch(`/update_task_status/${taskId}/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': getCookie('csrftoken')
                 },
-                body: JSON.stringify({ status: newStatus })
+                body: JSON.stringify({ status: newStatus, originalStatus })
             });
 
-            if (!response.ok) throw new Error('Failed to update task status');
+            const data = await response.json();
+            
+            if (!response.ok) throw new Error(data.message || 'Failed to update task status');
+
             showNotification('Task status updated successfully', 'success');
+            taskElement.dataset.status = newStatus;
+
         } catch (error) {
             console.error('Error:', error);
-            showNotification('Failed to update task status', 'error');
-            revertTaskPosition(taskElement); // Revert task to original position on error
+            showNotification(error.message || 'Failed to update task status', 'error');
+            const originalList = document.getElementById(originalStatus);
+            if (originalList) originalList.appendChild(taskElement);
         } finally {
             taskElement.classList.remove('updating');
         }
     }
 
-    // Revert Task Position
-    function revertTaskPosition(taskElement) {
-        const originalList = document.getElementById(taskElement.dataset.originalStatus);
-        if (originalList) {
-            originalList.appendChild(taskElement);
-        }
-    }
-
-    // Notification Badge Management
-    function showNotification(message, type = 'info') {
-        let container = document.querySelector('.alert-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.className = 'alert-container';
-            document.body.appendChild(container);
-        }
-
-        const notification = document.createElement('div');
-        notification.className = `alert alert-${type} alert-dismissible fade show glass-card`;
-        notification.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        `;
-        container.appendChild(notification);
-
-        const bsAlert = new bootstrap.Alert(notification);
-
-        setTimeout(() => {
-            notification.classList.remove('show');
-            setTimeout(() => {
-                bsAlert.dispose();
-                notification.remove();
-            }, 150);
-        }, 3000);
-    }
-
-    function updateNotificationCount(count) {
-        const badge = document.querySelector('.notification-badge');
-        if (badge) {
-            if (count > 0) {
-                badge.classList.add('pulse');
-                badge.style.display = 'block';
-                badge.textContent = count;
-            } else {
-                badge.classList.remove('pulse');
-                badge.style.display = 'none';
-            }
-        }
-    }
-
-    async function fetchNotifications() {
-        try {
-            const response = await fetch('/notifications/get_notifications');
-            if (!response.ok) throw new Error('Failed to fetch notifications');
-
-            const data = await response.json();
-            updateNotificationCount(data.unread_count);
-
-            data.notifications.forEach(notification => {
-                if (!notification.read) {
-                    showNotification(notification.message, 'info');
-                }
-            });
-        } catch (error) {
-            console.error('Notification fetch error:', error);
-        }
-    }
-
-    async function clearNotifications() {
-        try {
-            const response = await fetch('/projects/notifications/clear_all/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                }
-            });
-
-            if (!response.ok) throw new Error('Failed to clear notifications');
-            updateNotificationCount(0);
-            document.querySelector('.notification-body').innerHTML = `
-                <div class="p-4 text-center text-muted">
-                    <i class="bi bi-bell-slash fs-4 mb-2 d-block"></i>
-                    <p class="mb-0 small">No notifications</p>
-                </div>
-            `;
-        } catch (error) {
-            console.error('Clear notifications error:', error);
-            showNotification('Failed to clear notifications', 'error');
-        }
-    }
-
-    async function markAsRead(notificationId) {
-        try {
-            const response = await fetch(`/notifications/mark_as_read/${notificationId}/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                }
-            });
-            if (!response.ok) throw new Error('Failed to mark notification as read');
-
-            const notificationElement = document.querySelector(`.notification-item[data-id="${notificationId}"]`);
-            if (notificationElement) {
-                notificationElement.classList.remove('unread');
-            }
-        } catch (error) {
-            console.error('Mark as read error:', error);
-            showNotification('Failed to mark notification as read', 'error');
-        }
-    }
-
-    // CSRF Token Utility
-    function getCookie(name) {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(';').shift();
-    }
-
-    // Enhanced Search Functionality
-    function initializeSearch() {
-        const searchInput = document.querySelector('.search-wrapper input');
-        const searchWrapper = document.querySelector('.search-wrapper');
-
-        if (searchInput) {
-            let debounceTimer;
-
-            searchInput.addEventListener('input', (e) => {
-                clearTimeout(debounceTimer);
-                const searchTerm = e.target.value.trim();
-
-                searchWrapper.classList.toggle('is-searching', searchTerm.length > 0);
-
-                if (searchTerm.length > 2) {
-                    debounceTimer = setTimeout(() => performSearch(searchTerm), 300);
-                }
-            });
-
-            searchInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    searchInput.value = '';
-                    searchWrapper.classList.remove('is-searching');
-                }
-            });
-        }
-    }
-
-    async function performSearch(term) {
-        const searchWrapper = document.querySelector('.search-wrapper');
-        try {
-            const response = await fetch(`/api/search?q=${encodeURIComponent(term)}`);
-            if (!response.ok) throw new Error('Search failed');
-
-            const results = await response.json();
-            updateSearchResults(results);
-        } catch (error) {
-            console.error('Search error:', error);
-            showNotification('Search failed', 'error');
-        } finally {
-            searchWrapper?.classList.remove('is-searching');
-        }
-    }
-
     // Initialize all components
-    initializeTheme();
-    initializeSidebar();
-    initializeKanban();
-    initializeSearch();
-
-    // Fetch and update notifications
-    fetchNotifications();
+    try {
+        initializeTheme();
+        initializeSidebar();
+        initializeSearch();
+        initializeKanban();
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showNotification('Failed to initialize application', 'error');
+    }
 });

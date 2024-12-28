@@ -9,6 +9,7 @@ urlpatterns = [
     path('projects/create/', views.project_create, name='project_create'),
     path('projects/<int:project_id>/', views.project_detail, name='project_detail'),
     path('quick-create-task/', views.quick_create_task, name='quick_create_task'),
+    path('tasks/', views.task_list, name='task_list'),
     
     # Add these notification URLs
     path('notifications/clear/', views.clear_all_notifications, name='clear_notifications'),

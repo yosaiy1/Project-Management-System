@@ -111,6 +111,20 @@ def project_detail(request, project_id):
     tasks = Task.objects.filter(project=project)
     return render(request, 'projects/project_detail.html', {'project': project, 'tasks': tasks})
 
+# Task List View
+@login_required
+def task_list(request):
+    tasks = Task.objects.filter(
+        assigned_to=request.user
+    ).select_related('project').order_by('-created_at')
+    
+    return render(request, 'projects/task_list.html', {
+        'tasks': tasks,
+        'todo_tasks': tasks.filter(status='todo'),
+        'inprogress_tasks': tasks.filter(status='inprogress'),
+        'done_tasks': tasks.filter(status='done')
+    })
+
 # Task Detail View
 @login_required
 def task_detail(request, project_id, task_id):
@@ -704,4 +718,6 @@ def project_update(request, project_id):
         'is_update': True,
         'title': 'Update Project'
     })
+
+
 

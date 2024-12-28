@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}Tasks | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">My Tasks</h1>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">To Do</h5>
+                </div>
+                <div class="card-body">
+                    {% for task in todo_tasks %}
+                        {% include 'projects/includes/task_card.html' %}
+                    {% empty %}
+                        <p class="text-muted">No tasks to do</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">In Progress</h5>
+                </div>
+                <div class="card-body">
+                    {% for task in inprogress_tasks %}
+                        {% include 'projects/includes/task_card.html' %}
+                    {% empty %}
+                        <p class="text-muted">No tasks in progress</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Done</h5>
+                </div>
+                <div class="card-body">
+                    {% for task in done_tasks %}
+                        {% include 'projects/includes/task_card.html' %}
+                    {% empty %}
+                        <p class="text-muted">No completed tasks</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

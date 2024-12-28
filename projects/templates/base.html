@@ -20,9 +20,6 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body class="d-flex flex-column min-vh-100" data-bs-theme="light">
-    <!-- Skip to main content -->
-    <a href="#main-content" class="skip-link">Skip to main content</a>
-
     <!-- Overlay for mobile sidebar -->
     <div class="sidebar-overlay" aria-hidden="true"></div>
     
@@ -179,109 +176,149 @@
         </div>
     </header>
 
-    <!-- Sidebar -->
+    <!-- Sidebar Navigation -->
 <nav id="sidebar" class="glass-sidebar" aria-label="Main navigation">
-    <div class="sidebar-content h-100 d-flex flex-column">
-        <!-- User Profile Summary -->
-        <div class="p-4 border-bottom">
-            <div class="d-flex align-items-center gap-3 mb-3">
-                <div class="user-avatar rounded-circle overflow-hidden" style="width: 48px; height: 48px;">
+    <div class="sidebar-content">
+        <!-- User Profile Section -->
+        <div class="user-profile-section">
+            <div class="d-flex align-items-center gap-3 mb-2">
+                <div class="user-avatar">
                     {% if user.profile.avatar %}
-                        <img src="{{ user.profile.avatar.url }}" alt="Profile" class="w-100 h-100 object-fit-cover">
+                        <img src="{{ user.profile.avatar.url }}" alt="Profile">
                     {% else %}
                         <div class="avatar-placeholder">{{ user.username|slice:":1"|upper }}</div>
                     {% endif %}
                 </div>
-                <div>
-                    <h6 class="mb-0 fw-semibold">{{ user.get_full_name|default:user.username }}</h6>
-                    <small class="text-muted">{{ user.email }}</small>
+                <div class="user-info">
+                    <h6 class="mb-0">{{ user.get_full_name|default:user.username }}</h6>
+                    <div class="user-status">
+                        <span class="status-indicator online"></span>
+                        <span class="status-text">Online</span>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Main Navigation -->
-        <div class="p-4">
-            <div class="nav flex-column gap-2">
-                <!-- Dashboard -->
-                <a href="{% url 'homepage' %}" class="nav-link d-flex align-items-center gap-3 p-3 rounded-3 
-                    {% if request.resolver_match.url_name == 'homepage' %}active{% endif %}">
-                    <i class="bi bi-house-door fs-5"></i>
-                    <span class="fw-medium">Dashboard</span>
-                </a>
-
-                <!-- Project Management -->
-                <div class="nav-section mb-3">
-                    <h6 class="text-muted text-uppercase small px-3 mb-2">Projects</h6>
-                    <a href="{% url 'project_create' %}" class="nav-link d-flex align-items-center gap-3 p-3 rounded-3 
-                        {% if request.resolver_match.url_name == 'project_create' %}active{% endif %}">
-                        <i class="bi bi-plus-square fs-5"></i>
-                        <span class="fw-medium">Create Project</span>
-                    </a>
-                    <a href="{% url 'project_list' %}" class="nav-link d-flex align-items-center gap-3 p-3 rounded-3 
-                        {% if request.resolver_match.url_name == 'project_list' %}active{% endif %}">
-                        <i class="bi bi-folder fs-5"></i>
-                        <span class="fw-medium">All Projects</span>
-                    </a>
+        <div class="navigation-sections">
+            <!-- Dashboard Section -->
+            <div class="nav-section">
+                <div class="nav-section-header">
+                    <h6 class="section-title">Dashboard</h6>
                 </div>
-
-                <!-- Team Management -->
-                {% if user.is_staff or team %}
-                <div class="nav-section mb-3">
-                    <h6 class="text-muted text-uppercase small px-3 mb-2">Team</h6>
-                    <a href="{% url 'team_list' %}" class="nav-link d-flex align-items-center gap-3 p-3 rounded-3 
-                        {% if request.resolver_match.url_name == 'team_list' %}active{% endif %}">
-                        <i class="bi bi-people fs-5"></i>
-                        <span class="fw-medium">Teams</span>
-                    </a>
-                    <a href="{% url 'member_progress' %}" class="nav-link d-flex align-items-center gap-3 p-3 rounded-3 
-                        {% if request.resolver_match.url_name == 'member_progress' %}active{% endif %}">
-                        <i class="bi bi-graph-up fs-5"></i>
-                        <span class="fw-medium">Progress</span>
-                    </a>
-                </div>
-                {% endif %}
-
-                <!-- Analytics -->
-                <div class="nav-section mb-3">
-                    <h6 class="text-muted text-uppercase small px-3 mb-2">Analytics</h6>
-                    <a href="{% url 'analytics' %}" class="nav-link d-flex align-items-center gap-3 p-3 rounded-3 
-                        {% if request.resolver_match.url_name == 'analytics' %}active{% endif %}">
-                        <i class="bi bi-bar-chart fs-5"></i>
-                        <span class="fw-medium">Analytics</span>
+                <div class="nav-items">
+                    <a href="{% url 'homepage' %}" class="nav-link {% if request.resolver_match.url_name == 'homepage' %}active{% endif %}">
+                        <i class="bi bi-house-door"></i>
+                        <span>Overview</span>
+                        <span class="badge">{{ projects_count }}</span>
                     </a>
                 </div>
             </div>
+
+            <!-- Projects Section -->
+            <div class="nav-section">
+                <div class="nav-section-header">
+                    <h6 class="section-title">Projects</h6>
+                    <span class="badge bg-info">{{ active_projects_count }}</span>
+                </div>
+                <div class="nav-items">
+                    <a href="{% url 'project_list' %}" class="nav-link">
+                        <i class="bi bi-folder"></i>
+                        <span>All Projects</span>
+                    </a>
+                    <a href="{% url 'project_create' %}" class="nav-link">
+                        <i class="bi bi-folder-plus"></i>
+                        <span>New Project</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Tasks Section -->
+            <div class="nav-section">
+                <div class="nav-section-header">
+                    <h6 class="section-title">Tasks</h6>
+                    <span class="badge bg-warning">{{ pending_tasks_count }}</span>
+                </div>
+                <div class="progress-wrapper">
+                    <div class="progress-status">
+                        <span>Overall Progress</span>
+                        <span>{{ completion_rate }}%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar" style="width: {{ completion_rate }}%"></div>
+                    </div>
+                    <div class="status-info">
+                        <span>Completed</span>
+                        <span>{{ completed_tasks_count }}/{{ tasks_count }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team Section -->
+            {% if user.is_staff or team %}
+            <div class="nav-section">
+                <div class="nav-section-header">
+                    <h6 class="section-title">Team</h6>
+                    <span class="badge bg-success">{{ team_members_count }}</span>
+                </div>
+                <div class="nav-items">
+                    <a href="{% url 'team_list' %}" class="nav-link">
+                        <i class="bi bi-people"></i>
+                        <span>Team Overview</span>
+                    </a>
+                    <a href="{% url 'member_progress' %}" class="nav-link">
+                        <i class="bi bi-graph-up"></i>
+                        <span>Progress</span>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Quick Stats -->
-        <div class="mt-auto p-4 border-top">
-            <h6 class="fw-semibold mb-3">Quick Stats</h6>
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="text-muted">Projects</span>
-                <span class="badge bg-primary rounded-pill">{{ projects_count }}</span>
+        <div class="quick-stats">
+            <div class="stats-header">
+                <h6 class="stats-title">Quick Stats</h6>
             </div>
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="text-muted">Tasks</span>
-                <span class="badge bg-info rounded-pill">{{ tasks_count }}</span>
-            </div>
-            <div class="d-flex justify-content-between align-items-center">
-                <span class="text-muted">Completed</span>
-                <span class="badge bg-success rounded-pill">{{ completed_tasks_count }}</span>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <i class="bi bi-folder"></i>
+                    <div class="stat-info">
+                        <div class="stat-value">{{ projects_count }}</div>
+                        <div class="stat-label">Projects</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <i class="bi bi-list-check"></i>
+                    <div class="stat-info">
+                        <div class="stat-value">{{ tasks_count }}</div>
+                        <div class="stat-label">Tasks</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <i class="bi bi-check2-all"></i>
+                    <div class="stat-info">
+                        <div class="stat-value">{{ completed_tasks_count }}</div>
+                        <div class="stat-label">Done</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </nav>
 
     <!-- Main Content -->
-    <main id="main-content" class="flex-grow-1 pt-4" role="main">
+    <main id="main-content" class="flex-grow-1 pt-5 mt-4" role="main">
         <div class="container-fluid px-4">
             {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
+                <div class="messages-container">
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
             {% endif %}
             {% block content %}{% endblock %}
         </div>

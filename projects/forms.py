@@ -9,23 +9,25 @@ from django.core.exceptions import ValidationError
 class ProjectForm(forms.ModelForm):
     class Meta:
         model = Project
-        exclude = ['manager']
-        fields = ['name', 'description', 'start_date', 'end_date', 'team']
+        fields = ['name', 'description', 'team', 'status', 'start_date', 'end_date', 'priority']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control'}),
-            'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'end_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'team': forms.Select(attrs={'class': 'form-control'}),
+            'status': forms.Select(attrs={'class': 'form-control'}),
+            'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'end_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),  # Changed from due_date to end_date
+            'priority': forms.Select(attrs={'class': 'form-control'})
         }
 
     def clean(self):
         cleaned_data = super().clean()
         start_date = cleaned_data.get('start_date')
-        end_date = cleaned_data.get('end_date')
+        end_date = cleaned_data.get('end_date')  # Changed from due_date to end_date
 
         if start_date and end_date and start_date > end_date:
-            raise ValidationError("Start date cannot be later than end date.")
+            raise ValidationError({'end_date': 'End date must be after start date'})  # Changed error message to use end_date
+
         return cleaned_data
 
 # Task Form

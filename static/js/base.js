@@ -1005,20 +1005,62 @@ const formSystem = {
         }
     },
 
+    resetForm(form) {
+        if (!form) return;
+        
+        // Reset form fields
+        form.reset();
+        
+        // Remove validation classes
+        form.classList.remove('was-validated');
+        form.querySelectorAll('.is-invalid, .is-valid').forEach(field => {
+            field.classList.remove('is-invalid', 'is-valid');
+        });
+        
+        // Clear error messages
+        form.querySelectorAll('.invalid-feedback').forEach(feedback => {
+            feedback.textContent = '';
+        });
+        
+        // Reset file previews
+        form.querySelectorAll('[data-preview-for]').forEach(preview => {
+            preview.classList.add('d-none');
+            preview.src = '';
+        });
+
+        // Reset submit button
+        const submitButton = form.querySelector('button[type="submit"]');
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.innerHTML = submitButton.dataset.originalText || 'Save';
+        }
+    },
+
     async handleAjaxSubmit(e) {
         e.preventDefault();
         const form = e.target;
         const formState = this.state.forms.get(form.id);
         
         if (formState?.isSubmitting) return;
-        formState.isSubmitting = true;
+        
+        const submitButton = form.querySelector('button[type="submit"]');
+        if (!submitButton?.dataset.originalText) {
+            submitButton.dataset.originalText = submitButton.innerHTML;
+        }
         
         try {
             if (!this.validateForm({ target: form })) {
                 throw new Error('Please fix the validation errors');
             }
-
+    
+            formState.isSubmitting = true;
             form.classList.add('is-submitting');
+            
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+            }
+    
             const formData = new FormData(form);
             
             const response = await fetch(form.action, {
@@ -1029,41 +1071,98 @@ const formSystem = {
                 },
                 body: formData
             });
-            
-            const data = await response.json();
-            
-            if (response.ok && data.status === 'success') {
-                utils.showNotification(data.message || 'Success', 'success');
-                if (data.redirect) {
-                    window.location.href = data.redirect;
+    
+            // Special handling for notification clearing
+            if (form.action.includes('clear_notifications')) {
+                const data = await response.json();
+                if (data.status === 'success') {
+                    window.projectHub?.notificationSystem?.updateNotificationsList?.([]);
+                    window.projectHub?.notificationSystem?.updateUnreadCount?.(0);
+                    utils.showNotification(data.message || 'Notifications cleared', 'success');
+                    return;
+                }
+                throw new Error(data.message || 'Failed to clear notifications');
+            }
+    
+            // Handle project/task deletion
+            if (form.action.includes('delete')) {
+                const data = await response.json();
+                if (data.success) {
+                    utils.showNotification(data.message || 'Deleted successfully', 'success');
+                    if (data.redirect_url) {
+                        setTimeout(() => window.location.href = data.redirect_url, 1000);
+                    } else {
+                        window.location.href = response.url || '/';
+                    }
+                    return;
+                }
+                throw new Error(data.message || 'Deletion failed');
+            }
+    
+            // Handle other responses
+            const contentType = response.headers.get('content-type');
+            if (contentType?.includes('application/json')) {
+                const data = await response.json();
+                
+                if (data.success || data.status === 'success') {
+                    utils.showNotification(data.message || 'Success', 'success');
+                    if (data.redirect_url) {
+                        setTimeout(() => window.location.href = data.redirect_url, 1000);
+                    } else {
+                        this.resetForm(form);
+                    }
                 } else {
-                    this.resetForm(form);
+                    if (data.errors) {
+                        this.handleValidationErrors(form, data.errors);
+                    }
+                    throw new Error(data.message || 'Form submission failed');
                 }
             } else {
-                throw new Error(data.message || 'Submission failed');
+                // Handle non-JSON responses
+                const text = await response.text();
+                
+                if (response.ok) {
+                    if (response.redirected || response.url !== window.location.href) {
+                        window.location.href = response.url;
+                        return;
+                    }
+                    utils.showNotification('Success', 'success');
+                    this.resetForm(form);
+                } else {
+                    // Try to extract form with errors
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(text, 'text/html');
+                    const newForm = doc.querySelector('form');
+                    if (newForm) {
+                        form.innerHTML = newForm.innerHTML;
+                    }
+                    throw new Error('Form submission failed');
+                }
             }
         } catch (error) {
             console.error('Form submission error:', error);
             utils.showNotification(error.message, 'error');
         } finally {
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.innerHTML = submitButton.dataset.originalText;
+            }
             form.classList.remove('is-submitting');
             formState.isSubmitting = false;
         }
     },
 
-    resetForm(form) {
-        form.reset();
-        form.classList.remove('was-validated');
-        form.querySelectorAll('.is-valid, .is-invalid').forEach(field => {
-            field.classList.remove('is-valid', 'is-invalid');
-        });
+    handleValidationErrors(form, errors) {
+        if (!errors) return;
         
-        // Reset file previews
-        form.querySelectorAll(this.selectors.fileInput).forEach(input => {
-            const previewEl = document.querySelector(`[data-preview-for="${input.id}"]`);
-            if (previewEl) {
-                previewEl.classList.add('d-none');
-                previewEl.src = '';
+        Object.entries(errors).forEach(([field, messages]) => {
+            const input = form.querySelector(`[name="${field}"]`);
+            if (input) {
+                input.classList.add('is-invalid');
+                const feedback = input.nextElementSibling;
+                if (feedback?.classList.contains('invalid-feedback')) {
+                    feedback.textContent = Array.isArray(messages) ? messages.join(', ') : messages;
+                }
             }
         });
     },

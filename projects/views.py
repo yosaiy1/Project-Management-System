@@ -207,6 +207,34 @@ def project_create(request):
     return render(request, 'projects/project_form.html', {'form': form})
 
 @login_required
+def project_create_view(request):
+    if request.method == 'POST':
+        form = ProjectForm(request.POST)
+        if form.is_valid():
+            project = form.save(commit=False)
+            project.manager = request.user
+            project.save()
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Project created successfully',
+                    'redirect_url': reverse('project_detail', kwargs={'pk': project.pk})
+                })
+            return redirect('project_detail', pk=project.pk)
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'message': 'Please correct the errors below',
+                'errors': {field: errors for field, errors in form.errors.items()}
+            }, status=400)
+    else:
+        form = ProjectForm()
+    
+    return render(request, 'projects/project_form.html', {'form': form})
+
+@login_required
 @handle_view_errors
 def project_detail(request, project_id):
     project = get_object_or_404(Project.objects.select_related('team', 'manager'), id=project_id)
@@ -878,6 +906,11 @@ def quick_create_task(request):
 def project_update(request, project_id):
     project = get_object_or_404(Project, id=project_id)
     if not has_project_permission(request.user, project):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'message': MSG_PERMISSION_DENIED
+            }, status=403)
         messages.error(request, MSG_PERMISSION_DENIED)
         return redirect('project_list')
 
@@ -885,10 +918,24 @@ def project_update(request, project_id):
         form = ProjectForm(request.POST, instance=project)
         if form.is_valid():
             form.save()
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Project updated successfully',
+                    'redirect_url': reverse('project_detail', kwargs={'pk': project.pk})
+                })
             messages.success(request, 'Project updated successfully!')
             return redirect('project_detail', project_id=project.id)
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'message': 'Please correct the errors below',
+                'errors': {field: errors for field, errors in form.errors.items()}
+            }, status=400)
     else:
         form = ProjectForm(instance=project)
+    
     return render(request, 'projects/project_form.html', {'form': form, 'project': project})
 
 @login_required

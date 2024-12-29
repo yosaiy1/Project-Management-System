@@ -142,12 +142,19 @@ class Project(models.Model):
         ('completed', 'Completed'),
         ('on_hold', 'On Hold')
     ]
+
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High')
+    ]
     
     name = models.CharField(max_length=200)
     description = models.TextField()
     team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='projects')
     manager = models.ForeignKey(User, on_delete=models.CASCADE, related_name='managed_projects')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='planned')
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
     start_date = models.DateField()
     end_date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)

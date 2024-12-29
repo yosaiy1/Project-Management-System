@@ -1,0 +1,112 @@
+/* Task List Styles */
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius);
+    transition: transform var(--transition-normal);
+}
+
+.card-header {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.task-list {
+    min-height: 200px;
+    transition: background-color var(--transition-normal);
+}
+
+/* Task Card Styles */
+.task-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: calc(var(--border-radius) - 4px);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+    cursor: grab;
+    transition: all var(--transition-normal);
+}
+
+.task-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.task-card.task-ghost {
+    opacity: 0.5;
+}
+
+.task-card.task-drag {
+    cursor: grabbing;
+}
+
+.task-drag-handle {
+    width: 100%;
+}
+
+/* Badge Styles */
+.badge {
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 600;
+    border-radius: 9999px;
+}
+
+.badge.bg-todo { background-color: var(--warning) !important; }
+.badge.bg-inprogress { background-color: var(--info) !important; }
+.badge.bg-done { background-color: var(--success) !important; }
+
+.badge.bg-high { background-color: var(--danger) !important; }
+.badge.bg-medium { background-color: var(--warning) !important; }
+.badge.bg-low { background-color: var(--info) !important; }
+
+/* Empty State */
+.text-center.text-muted {
+    padding: var(--spacing-xl);
+}
+
+.text-center.text-muted i {
+    font-size: 2rem;
+    margin-bottom: var(--spacing-md);
+    opacity: 0.5;
+}
+
+/* Search Input */
+.search-wrapper {
+    position: relative;
+    min-width: 300px;
+}
+
+.search-wrapper input {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    padding-left: 2.5rem;
+}
+
+.search-wrapper::before {
+    content: '\F52A';
+    font-family: 'bootstrap-icons';
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .search-wrapper {
+        min-width: auto;
+        width: 100%;
+    }
+    
+    .glass-card {
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .task-card {
+        margin-bottom: var(--spacing-sm);
+    }
+}

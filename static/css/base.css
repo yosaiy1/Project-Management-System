@@ -336,34 +336,305 @@ body {
   color: var(--primary);
 }
 
-/* Notifications */
+/* Notification System */
+.notification-body {
+  max-height: 360px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.notification-header {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.notification-item {
+  transition: background-color var(--transition-normal);
+  cursor: pointer;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border-color);
+  animation: notification-popup 0.3s ease-out forwards;
+}
+
+.notification-item:hover {
+  background: var(--primary-light);
+}
+
+.notification-item.unread {
+  background: var(--primary-light);
+  border-left: 3px solid var(--primary);
+}
+
+.notification-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: var(--danger);
+  color: white;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 1rem;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.notification-counter {
+  background: var(--danger);
+  color: white;
+  border-radius: 50%;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Notification Hover States */
+.notification-item {
+  position: relative;
+  transition: all var(--transition-normal);
+}
+
+.notification-item::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--primary);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform var(--transition-normal);
+}
+
+.notification-item:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* Notification Read/Unread States */
+.notification-item.unread .notification-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--primary);
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 0.5rem;
+}
+
+/* Notification System Extra Styles */
+.notification-message {
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+  line-height: 1.4;
+}
+
+.notification-time {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.notification-empty {
+  padding: var(--spacing-xl);
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.notification-empty i {
+  font-size: 2rem;
+  margin-bottom: var(--spacing-md);
+  opacity: 0.5;
+}
+
+.notification-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.notification-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-left: auto;
+}
+
+.notification-mark-read {
+  color: var(--primary);
+  font-size: 0.875rem;
+  cursor: pointer;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius);
+  transition: background-color var(--transition-normal);
+}
+
+.notification-mark-read:hover {
+  background-color: var(--primary-light);
+}
+
+/* Notification Counter Animation */
+@keyframes notification-badge-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.notification-badge.has-new {
+  animation: notification-badge-pulse 1s infinite;
+}
+
+/* Toast Notifications */
 .toast-container {
   position: fixed;
-  top: var(--spacing-lg);
-  right: var(--spacing-lg);
+  top: 1rem;
+  right: 1rem;
   z-index: var(--z-toast);
 }
 
 .toast {
   background: var(--glass-bg);
   backdrop-filter: blur(var(--blur));
-  border: 1px solid var(--glass-border);
   border-radius: var(--border-radius);
-  padding: var(--spacing-md);
-  margin-bottom: var(--spacing-sm);
+  border: 1px solid var(--glass-border);
+  margin-bottom: 0.5rem;
   min-width: 300px;
+  box-shadow: var(--shadow-lg);
+}
+
+/* Notification Animations */
+@keyframes notification-popup {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toast-slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.toast {
+  animation: toast-slide-in 0.3s ease-out forwards;
+}
+
+/* Toast Variants */
+.toast-success {
+  background: var(--success);
+  color: white;
+}
+
+.toast-warning {
+  background: var(--warning);
+  color: white;
+}
+
+.toast-danger {
+  background: var(--danger);
+  color: white;
+}
+
+.toast-info {
+  background: var(--info);
+  color: white;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .toast-container {
+    width: calc(100% - 2rem);
+  }
+  
+  .toast {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .notification-body {
+    max-height: 300px;
+  }
 }
 
 /* Badge Styles */
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.25em 0.6em;
+  padding: 0.35rem 0.65rem;
   font-size: 0.75rem;
   font-weight: 600;
   border-radius: 9999px;
+}
+
+.badge-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.badge-primary-light {
   background: var(--primary-light);
   color: var(--primary);
+}
+
+.badge.bg-admin {
+  background: var(--primary);
+}
+
+.badge.bg-member {
+  background: var(--info);
+}
+
+.badge.bg-owner {
+  background: var(--danger);
+}
+
+.badge.bg-todo { 
+  background-color: var(--warning) !important; 
+  color: white;
+}
+
+.badge.bg-inprogress { 
+  background-color: var(--info) !important;
+  color: white; 
+}
+
+.badge.bg-done { 
+  background-color: var(--success) !important;
+  color: white;
 }
 
 /* Alert Variations */
@@ -950,5 +1221,104 @@ body {
     .glass-nav,
     .glass-sidebar {
         forced-color-adjust: none;
+    }
+}
+
+/* Role Colors */
+.bg-owner { background: var(--danger) !important; }
+.bg-admin { background: var(--primary) !important; }
+.bg-member { background: var(--info) !important; }
+
+/* Task Status Colors */
+.bg-todo { background: var(--warning) !important; }
+.bg-inprogress { background: var(--info) !important; }
+.bg-done { background: var(--success) !important; }
+
+/* Hover Effects */
+.hover-translate {
+    transition: transform var(--transition-normal);
+}
+
+.hover-translate:hover {
+    transform: translateY(-2px);
+}
+
+/* Glass Card Variations */
+.glass-card.hoverable {
+    transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.glass-card.hoverable:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Avatar Placeholders */
+.avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-light);
+    color: var(--primary);
+    font-weight: 600;
+    border-radius: 50%;
+}
+
+/* Fade In Animation */
+.fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Status Colors */
+.status-todo { background-color: var(--warning); }
+.status-inprogress { background-color: var(--info); }
+.status-done { background-color: var(--success); }
+.status-cancelled { background-color: var(--danger); }
+
+/* Role Colors */
+.role-owner { color: var(--danger); }
+.role-admin { color: var(--primary); }
+.role-member { color: var(--info); }
+
+/* Card Grid Layouts */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+/* Task Priority Indicators */
+.priority-high { border-left: 4px solid var(--danger); }
+.priority-medium { border-left: 4px solid var(--warning); }
+.priority-low { border-left: 4px solid var(--info); }
+
+/* Progress Indicators */
+.progress-wrapper {
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-xs);
+}
+
+/* Additional Animations */
+.slide-in {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(-20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* Responsive Task Cards */
+@media (max-width: 768px) {
+    .card-grid {
+        grid-template-columns: 1fr;
     }
 }

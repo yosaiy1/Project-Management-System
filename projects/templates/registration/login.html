@@ -1,64 +1,145 @@
-{% load static %}
-{% load custom_filters %}  <!-- Load the custom filter -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Login to Project Hub - Project Management System">
+    <title>Login | Project Hub</title>
+    
+    <!-- Preload critical assets -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Styles -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/login.css' %}">
+</head>
+<body>
+    <div class="login-page">
+        <!-- Animated background -->
+        <div class="background-shapes"></div>
+        
+        <div class="login-container">
+            <div class="login-wrapper">
+                <!-- Brand Logo -->
+                <div class="text-center mb-4">
+                    <div class="brand-wrapper">
+                        <i class="bi bi-kanban brand-icon"></i>
+                        <h1 class="brand-text">Project Hub</h1>
+                        <p class="text-muted">Welcome back! Please login to your account.</p>
+                    </div>
+                </div>
 
-{% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/login.css' %}">
-{% endblock %}
+                <!-- Login Card -->
+                <div class="glass-card">
+                    <div class="card-body p-4">
+                        {% if messages %}
+                            <div class="messages mb-4">
+                                {% for message in messages %}
+                                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
 
-{% block content %}
-<div class="container mt-5">
-  <div class="row justify-content-center">
-    <div class="col-md-6 col-lg-4">
-      <div class="card shadow-lg border-0 rounded-3">
-        <div class="card-body p-4">
-          <h2 class="text-center mb-4 fw-bold">Login</h2>
+                        <form method="POST" class="needs-validation" novalidate>
+                            {% csrf_token %}
+                            
+                            <!-- Username -->
+                            <div class="form-group mb-3">
+                                <label for="username" class="form-label">Username</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="bi bi-person"></i>
+                                    </span>
+                                    <input type="text" 
+                                           id="username"
+                                           name="username" 
+                                           class="form-control" 
+                                           placeholder="Enter your username"
+                                           required>
+                                </div>
+                            </div>
 
-          <form method="POST" class="needs-validation" novalidate>
-            {% csrf_token %}
+                            <!-- Password -->
+                            <div class="form-group mb-3">
+                                <label for="password" class="form-label">Password</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="bi bi-lock"></i>
+                                    </span>
+                                    <input type="password"
+                                           id="password"
+                                           name="password" 
+                                           class="form-control" 
+                                           placeholder="Enter your password"
+                                           required>
+                                    <button class="btn btn-light" type="button" id="togglePassword">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
 
-            {% if form.errors %}
-              <div class="alert alert-danger">
-                <ul class="mb-0">
-                  {% for field in form %}
-                    {% for error in field.errors %}
-                      <li>{{ error }}</li>
-                    {% endfor %}
-                  {% endfor %}
-                </ul>
-              </div>
-            {% endif %}
+                            <!-- Remember Me & Forgot Password -->
+                            <div class="form-group d-flex justify-content-between align-items-center mb-4">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                                    <label class="form-check-label" for="remember">Remember me</label>
+                                </div>
+                                <a href="{% url 'password_reset' %}" class="forgot-password">
+                                    Forgot Password?
+                                </a>
+                            </div>
 
-            {% for field in form %}
-              <div class="mb-3">
-                <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
-                {{ field|add_class:"form-control" }}
-                {% if field.errors %}
-                  <div class="text-danger mt-1">
-                    {% for error in field.errors %}
-                      <small>{{ error }}</small>
-                    {% endfor %}
-                  </div>
-                {% endif %}
-              </div>
-            {% endfor %}
+                            <!-- Login Button -->
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+                            </button>
+                        </form>
 
-            <div class="mb-3 form-check">
-              <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me">
-              <label class="form-check-label" for="remember_me">Remember Me</label>
+                        <!-- Register Link -->
+                        <p class="text-center mt-4 mb-0">
+                            Don't have an account? 
+                            <a href="{% url 'register' %}" class="register-link">
+                                Sign up
+                            </a>
+                        </p>
+                    </div>
+                </div>
             </div>
-
-            <button type="submit" class="btn btn-primary w-100 py-2">Login</button>
-          </form>
-
-          <p class="text-center mt-4 mb-0">
-            <a href="{% url 'password_reset' %}" class="link-primary">Forgot your password?</a>
-          </p>
-          <p class="text-center mt-2 mb-0">
-            Don't have an account? <a href="{% url 'register' %}" class="link-primary">Sign up here</a>.
-          </p>
         </div>
-      </div>
     </div>
-  </div>
-</div>
-{% endblock %}
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Password Toggle
+            const togglePassword = document.querySelector('#togglePassword');
+            const password = document.querySelector('#password');
+
+            togglePassword?.addEventListener('click', function() {
+                const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+                password.setAttribute('type', type);
+                this.querySelector('i').classList.toggle('bi-eye');
+                this.querySelector('i').classList.toggle('bi-eye-slash');
+            });
+
+            // Form Validation
+            const form = document.querySelector('form');
+            form?.addEventListener('submit', function(event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            });
+        });
+    </script>
+</body>
+</html>

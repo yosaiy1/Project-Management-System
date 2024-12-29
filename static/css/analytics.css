@@ -1,170 +1,164 @@
-/* Modern Color Palette - Matching Homepage */
+/* Analytics Dashboard Styles */
 :root {
-    --primary: #4f46e5;
-    --primary-light: #818cf8;
-    --secondary: #6366f1;
-    --accent: #c084fc;
-    --success: #34d399;
-    --warning: #fbbf24;
-    --danger: #ef4444;
-    --background: #f8fafc;
-    --card-bg: #ffffff;
-    --text-primary: #1e293b;
-    --text-secondary: #64748b;
-    --border-light: #e2e8f0;
-    --gradient-1: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
-    --gradient-2: linear-gradient(135deg, #c084fc 0%, #818cf8 100%);
+    --chart-height: 400px;
+    --stat-card-min-height: 120px;
 }
 
-/* Page Header */
-h2 {
-    background: var(--gradient-1);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    font-size: 2.5rem;
-    font-weight: 800;
-    margin-bottom: 2rem;
-    text-align: center;
-    letter-spacing: -0.02em;
-    position: relative;
-}
-
-h2::after {
-    content: '';
-    position: absolute;
-    bottom: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 150px;
-    height: 4px;
-    background: var(--gradient-2);
-    border-radius: 2px;
-}
-
-/* Quick Stats Cards */
-.stat-card {
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 1.5rem;
-    box-shadow: 0 10px 30px rgba(99, 102, 241, 0.1);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    overflow: hidden;
-    position: relative;
-}
-
-.stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(192, 132, 252, 0.1) 100%);
-    opacity: 0;
-    transition: opacity 0.4s ease;
-}
-
-.stat-card:hover {
-    transform: translateY(-10px) scale(1.02);
-    box-shadow: 0 25px 50px rgba(99, 102, 241, 0.15);
-}
-
-.stat-card:hover::before {
-    opacity: 1;
-}
-
-/* Chart Cards */
-.glass-card {
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(15px);
-    border-radius: 1.5rem;
+/* Container Styles */
+.container-fluid {
     padding: 2rem;
-    border: 1px solid rgba(99, 102, 241, 0.15);
-    box-shadow: 0 15px 35px rgba(99, 102, 241, 0.1);
-    transition: all 0.3s ease;
 }
 
-.glass-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 20px 40px rgba(99, 102, 241, 0.2);
+/* Glass Card Styles */
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius);
+    transition: transform var(--transition-normal);
+    height: 100%;
+    min-height: 400px; /* Add minimum height */
+}
+
+/* Stat Cards */
+.stat-card {
+    min-height: var(--stat-card-min-height);
+    padding: var(--spacing-lg);
+}
+
+.stat-card .bg-opacity-10 {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat-card h6 {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.stat-card h3 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+/* Chart Containers */
+.card-body {
+    position: relative;
+    padding: var(--spacing-lg);
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Ensure full height */
 }
 
 .card-title {
-    color: var(--text-primary);
-    font-size: 1.25rem;
-    font-weight: 700;
-    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-lg);
 }
 
-/* Filter Controls */
+canvas {
+    width: 100% !important;
+    height: 100% !important; /* Make canvas fill container */
+    min-height: 300px; /* Minimum height for charts */
+}
+
+/* Controls */
 .form-select {
-    border: 2px solid var(--border-light);
-    border-radius: 1rem;
-    padding: 0.75rem 1rem;
-    font-weight: 500;
-    transition: all 0.3s ease;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    padding: 0.5rem 2.25rem 0.5rem 0.75rem;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: border-color var(--transition-normal);
 }
 
 .form-select:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 0.25rem rgba(99, 102, 241, 0.25);
+    box-shadow: 0 0 0 2px var(--primary-light);
 }
 
-/* Export Button */
 .btn-primary {
-    background: var(--gradient-1);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--primary);
     border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 1rem;
-    font-weight: 600;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
     color: white;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    border-radius: var(--border-radius);
+    transition: all var(--transition-normal);
 }
 
 .btn-primary:hover {
+    background: var(--primary-dark);
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
 }
 
-/* Animations */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.glass-card {
-    animation: fadeIn 0.6s ease-out forwards;
-}
-
-/* Responsive Design */
+/* Responsive Styles */
 @media (max-width: 768px) {
-    h2 {
-        font-size: 2rem;
+    :root {
+        --chart-height: 300px;
+        --stat-card-min-height: 100px;
+    }
+
+    .container-fluid {
+        padding: 1rem;
     }
 
     .stat-card {
-        margin-bottom: 1rem;
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
     }
 
+    .stat-card h3 {
+        font-size: 1.5rem;
+    }
+
+    .card-body {
+        padding: var(--spacing-md);
+    }
+
+    canvas {
+        height: 250px !important;
+    }
+}
+
+/* Loading States */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+    position: relative;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(2px);
+}
+
+/* Print Styles */
+@media print {
     .glass-card {
-        margin-bottom: 1.5rem;
-        padding: 1.5rem;
+        break-inside: avoid;
+        page-break-inside: avoid;
     }
 
-    .card-title {
-        font-size: 1.1rem;
+    canvas {
+        max-height: 300px !important;
     }
 
-    .btn-primary {
-        width: 100%;
-        margin-top: 1rem;
+    .no-print {
+        display: none !important;
     }
 }

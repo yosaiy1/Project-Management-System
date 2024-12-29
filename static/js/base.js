@@ -857,67 +857,6 @@ const modalSystem = {
     }
 };
 
-// Analytics System
-const analyticsSystem = {
-    init() {
-        this.setupCharts();
-        this.setupRefreshTimer();
-    },
-
-    setupCharts() {
-        const charts = document.querySelectorAll('[data-chart]');
-        charts.forEach(chart => {
-            const type = chart.dataset.chart;
-            const data = JSON.parse(chart.dataset.chartData || '{}');
-            this.createChart(chart, type, data);
-        });
-    },
-
-    setupRefreshTimer() {
-        // Refresh charts every 5 minutes
-        setInterval(() => this.refreshCharts(), 300000);
-    },
-
-    async refreshCharts() {
-        try {
-            const response = await fetch('/api/analytics/data/');
-            if (!response.ok) throw new Error('Failed to fetch analytics data');
-            
-            const data = await response.json();
-            this.updateCharts(data);
-        } catch (error) {
-            console.error('Chart refresh error:', error);
-        }
-    },
-
-    createChart(element, type, data) {
-        if (!element || !type || !data) return;
-        
-        try {
-            return new Chart(element, {
-                type,
-                data,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: {
-                        duration: 1000,
-                        easing: 'easeOutQuart'
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    }
-                }
-            });
-        } catch (error) {
-            console.error('Chart creation error:', error);
-            utils.showNotification('Failed to create chart', 'error');
-        }
-    }
-};
-
 const formSystem = {
     selectors: {
         ajaxForm: 'form[data-ajax]',
@@ -1224,10 +1163,6 @@ document.addEventListener('DOMContentLoaded', function() {
         keyboardShortcuts.init();
         modalSystem.init();
         
-        // Page-specific systems
-        if (window.location.pathname.includes('/analytics')) {
-            analyticsSystem.init();
-        }
         if (document.querySelector('form')) {
             formSystem.init();
         }
@@ -1243,7 +1178,6 @@ document.addEventListener('DOMContentLoaded', function() {
             keyboardShortcuts,
             taskSystem,
             modalSystem,
-            analyticsSystem,
             formSystem
         });
 

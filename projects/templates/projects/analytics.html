@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4">
+<div id="analyticsCharts" class="container-fluid px-4">
     <!-- Page Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0">Analytics Dashboard</h2>
@@ -136,5 +136,21 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+<script>
+    window.analyticsData = {
+        timelineLabels: {{ timeline_labels|safe }},
+        completedTasksData: {{ completed_tasks_data|safe }},
+        taskDistribution: {{ task_distribution|safe }},
+        teamLabels: {{ team_labels|safe }},
+        teamPerformance: {{ team_performance|safe }},
+        trendLabels: {{ trend_labels|safe }},
+        completionTrend: {{ completion_trend|safe }}
+    };
+
+    function exportAnalytics() {
+        const timeRange = document.getElementById('timeRange')?.value || '7';
+        window.location.href = `/export-report/?range=${timeRange}`;
+    }
+</script>
 <script src="{% static 'js/analytics.js' %}"></script>
 {% endblock %}

@@ -8,34 +8,34 @@ from .constants import TASK_STATUS_TODO, TASK_STATUS_IN_PROGRESS, TASK_STATUS_DO
 # Initialize logger
 logger = logging.getLogger(__name__)
 
-def get_timeline_labels():
-    """Return last 7 days formatted labels"""
+def get_timeline_labels(time_range=7):
+    """Get timeline labels for last N days"""
     try:
-        return [
-            (timezone.now() - timedelta(days=x)).strftime('%b %d') 
-            for x in range(6, -1, -1)
-        ]
+        today = timezone.now()
+        return [(today - timedelta(days=x)).strftime('%b %d') 
+                for x in range(time_range-1, -1, -1)]
     except Exception as e:
-        logger.error(f"Error generating timeline labels: {e}")
+        logger.error(f"Error getting timeline labels: {e}")
         return []
 
-def get_completed_tasks_data(user):
-    """Return completed tasks count for last 7 days"""
+def get_completed_tasks_data(user, time_range=7):
+    """Get completed tasks data with time range parameter"""
     try:
         tasks = Task.objects.filter(
             assigned_to=user,
             status=TASK_STATUS_DONE
         ).select_related('project')
-
-        return [
-            tasks.filter(
-                completed_at__date=timezone.now().date() - timedelta(days=x)
-            ).count() 
-            for x in range(6, -1, -1)
-        ]
+        
+        data = []
+        for x in range(time_range-1, -1, -1):
+            date = timezone.now() - timedelta(days=x)
+            count = tasks.filter(completed_at__date=date.date()).count()
+            data.append(count)
+            
+        return data
     except Exception as e:
         logger.error(f"Error getting completed tasks data: {e}")
-        return [0] * 7
+        return [0] * time_range
 
 def get_task_distribution(user):
     """Get task counts by status"""
@@ -62,16 +62,6 @@ def get_task_distribution(user):
     except Exception as e:
         logger.error(f"Error getting task distribution: {e}")
         return [0, 0, 0]
-
-def get_team_labels(user):
-    """Get list of team names"""
-    try:
-        return list(Team.objects.filter(
-            members__user=user
-        ).values_list('name', flat=True))
-    except Exception as e:
-        logger.error(f"Error getting team labels: {e}")
-        return []
 
 def get_team_performance(user):
     """Get completed tasks count per team"""
@@ -108,28 +98,24 @@ def calculate_completion_rate(user):
         logger.error(f"Error calculating completion rate: {e}")
         return 0
 
-def get_completion_trend(user):
-    """Get task completion trend over 4 weeks"""
+def get_completion_trend(user, time_range=7):
+    """Get task completion trend for the specified time range"""
     try:
+        tasks = Task.objects.filter(assigned_to=user)
         trend_data = []
-        now = timezone.now()
         
-        for week in range(4):
-            start_date = now - timedelta(weeks=week+1)
-            end_date = now - timedelta(weeks=week)
-            
-            completed = Task.objects.filter(
-                assigned_to=user,
+        for x in range(time_range-1, -1, -1):
+            date = timezone.now() - timedelta(days=x)
+            total = tasks.filter(created_at__date=date.date()).count()
+            completed = tasks.filter(
                 status=TASK_STATUS_DONE,
-                completed_at__range=[start_date, end_date]
+                completed_at__date=date.date()
             ).count()
-            trend_data.append(completed)
-        
-        return trend_data[::-1]  # Reverse to show oldest to newest
+            
+            percentage = (completed / total * 100) if total > 0 else 0
+            trend_data.append(round(percentage, 1))
+            
+        return trend_data
     except Exception as e:
         logger.error(f"Error getting completion trend: {e}")
-        return [0] * 4
-
-def get_trend_labels():
-    """Get week labels for trends"""
-    return ['Week 1', 'Week 2', 'Week 3', 'Week 4']
+        return [0] * time_range

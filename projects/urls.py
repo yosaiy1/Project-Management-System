@@ -30,6 +30,7 @@ urlpatterns = [
     path('teams/<int:team_id>/', views.team_detail, name='team_detail'),
     path('teams/<int:team_id>/projects/', views.team_projects, name='team_projects'),
     path('teams/<int:team_id>/members/', views.manage_team_members, name='manage_team_members'),
+    path('teams/<int:team_id>/invite/', views.invite_team_member, name='team_invite_member'),  
     path('teams/<int:team_id>/members/remove/<int:member_id>/', views.remove_team_member, name='remove_team_member'),
     
     # Notification URLs
@@ -55,14 +56,15 @@ urlpatterns = [
     # Search & API URLs
     path('search/', views.search_view, name='search'),
     path('api/search/', views.api_search, name='api_search'),
+    path('api/tasks/<int:task_id>/update-status/', views.update_task_status, name='update_task_status'),
+    path('api/analytics/data/', views.analytics_data, name='analytics_data'),
     
     # Analytics & Progress URLs
     path('progress/', views.progress, name='progress'),
     path('progress/members/', views.member_progress, name='member_progress'),
     path('analytics/', views.analytics_view, name='analytics'),
     path('reports/', views.reports_view, name='reports'),
-
-    
+    path('api/analytics/data/', views.analytics_data, name='analytics_data'),
         
     # Settings URLs
     path('settings/', views.settings_view, name='settings'),
@@ -84,4 +86,10 @@ urlpatterns = [
     path('projects/<int:project_id>/files/', views.project_files, name='project_files'),
     path('projects/<int:project_id>/files/upload/', views.upload_file, name='upload_file'),
     path('files/<int:file_id>/delete/', views.delete_file, name='delete_file'),
+
+
 ]
+
+handler404 = 'projects.views.handler404'
+handler500 = 'projects.views.handler500'
+handler403 = 'projects.views.handler403'

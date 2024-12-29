@@ -1,50 +1,168 @@
-/* General Container Styling */
-.container {
-    margin-top: 2rem;
+/* Task Detail Styles */
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+    box-shadow: var(--shadow-lg);
 }
 
-/* Section Headers */
-h2 {
-    font-weight: 700;
-    color: #333;
-    margin-bottom: 1rem;
+.card-header {
+    background: transparent;
+    border-bottom: 1px solid var(--border-color);
+    padding: var(--spacing-md) var(--spacing-lg);
 }
 
-/* Paragraph Styling */
-p {
-    font-size: 1rem;
-    color: #666;
+/* Stats Cards */
+.stat-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius);
+    transition: transform var(--transition-normal);
+    padding: var(--spacing-md);
+    height: 100%;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Progress Bar */
+.progress {
+    height: 8px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    background: var(--gradient-1);
+    transition: width 0.3s ease;
+}
+
+/* Badge Styles */
+.badge {
+    padding: 0.5rem 0.75rem;
+    font-weight: 500;
+    font-size: 0.75rem;
+    border-radius: 9999px;
+}
+
+.badge.bg-todo { background-color: var(--warning) !important; }
+.badge.bg-inprogress { background-color: var(--info) !important; }
+.badge.bg-done { background-color: var(--success) !important; }
+
+/* Buttons */
+.btn-group .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+}
+
+.hover-translate {
+    transition: transform var(--transition-normal);
+}
+
+.hover-translate:hover {
+    transform: translateY(-2px);
+}
+
+/* Modal Styles */
+.modal-content.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-lg);
+}
+
+.modal-header {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-body {
+    padding: var(--spacing-lg);
+}
+
+.modal-footer {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-top: 1px solid var(--border-color);
+    gap: var(--spacing-sm);
+}
+
+/* Alert in Modal */
+.alert.bg-danger.bg-opacity-10 {
+    background: rgba(239, 68, 68, 0.1) !important;
+    border-left: 4px solid var(--danger);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md) var(--spacing-lg);
+}
+
+.alert p {
+    color: var(--text-primary);
+    font-size: 0.875rem;
     margin-bottom: 0.5rem;
 }
 
-/* Strong Text Styling */
-strong {
-    color: #333;
+.alert small {
+    color: var(--danger);
+    font-size: 0.75rem;
 }
 
-/* Button Styling */
-.btn-secondary {
-    background-color: #6c757d;
-    border-color: #6c757d;
-    transition: background-color 0.3s ease, color 0.3s ease;
+/* Loading States */
+.btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
 }
 
-.btn-secondary:hover {
-    background-color: #5a6268;
-    border-color: #545b62;
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    border-width: 0.15em;
 }
 
-/* Responsive Adjustments */
+/* Responsive Design */
 @media (max-width: 768px) {
-    h2 {
-        font-size: 1.5rem;
+    .glass-card {
+        padding: var(--spacing-md);
+    }
+    
+    .stat-card {
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .btn-group {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-group .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
     }
 
-    p {
-        font-size: 0.9rem;
+    .modal-dialog {
+        margin: var(--spacing-sm);
     }
 
-    .btn-secondary {
-        font-size: 0.9rem;
+    .modal-body {
+        padding: var(--spacing-md);
+    }
+
+    .modal-footer {
+        flex-direction: column-reverse;
+        gap: var(--spacing-sm);
+    }
+
+    .modal-footer .btn {
+        width: 100%;
     }
 }

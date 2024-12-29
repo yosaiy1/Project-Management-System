@@ -1,60 +1,214 @@
-{% load static %}
-{% load custom_filters %}  <!-- Load the custom filter -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Register for Project Hub - Project Management System">
+    <title>Register | Project Hub</title>
+    
+    <!-- Preload critical assets -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Styles -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/register.css' %}">
+</head>
+<body>
+    <div class="login-page">
+        <!-- Animated background -->
+        <div class="background-shapes"></div>
+        
+        <div class="login-container">
+            <div class="login-wrapper">
+                <!-- Brand Logo -->
+                <div class="text-center mb-4">
+                    <div class="brand-wrapper">
+                        <i class="bi bi-kanban brand-icon"></i>
+                        <h1 class="brand-text">Project Hub</h1>
+                        <p class="text-muted">Create your account to get started</p>
+                    </div>
+                </div>
 
-{% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/register.css' %}">
-{% endblock %}
+                <!-- Register Card -->
+                <div class="glass-card">
+                    <div class="card-body p-4">
+                        {% if messages %}
+                            <div class="messages mb-4">
+                                {% for message in messages %}
+                                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
 
-{% block content %}
-<div class="container mt-5">
-  <div class="row justify-content-center">
-    <div class="col-md-6 col-lg-4">
-      <div class="card shadow-lg border-0 rounded-3">
-        <div class="card-body p-4">
-          <h2 class="text-center mb-4 fw-bold">Register</h2>
+                        <form method="POST" class="needs-validation" novalidate>
+                            {% csrf_token %}
+                            
+                            <!-- Username -->
+                            <div class="form-group mb-3">
+                                <label for="username" class="form-label">Username</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="bi bi-person"></i>
+                                    </span>
+                                    <input type="text" 
+                                           id="username"
+                                           name="username" 
+                                           class="form-control" 
+                                           placeholder="Choose a username"
+                                           required>
+                                </div>
+                                {% if form.username.errors %}
+                                    <div class="text-danger mt-1">
+                                        {% for error in form.username.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
 
-          <form method="POST" class="needs-validation" novalidate>
-            {% csrf_token %}
+                            <!-- Email -->
+                            <div class="form-group mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="bi bi-envelope"></i>
+                                    </span>
+                                    <input type="email"
+                                           id="email"
+                                           name="email" 
+                                           class="form-control" 
+                                           placeholder="Enter your email"
+                                           required>
+                                </div>
+                                {% if form.email.errors %}
+                                    <div class="text-danger mt-1">
+                                        {% for error in form.email.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
 
-            <!-- Display errors -->
-            {% if form.errors %}
-              <div class="alert alert-danger">
-                <ul class="mb-0">
-                  {% for field in form %}
-                    {% for error in field.errors %}
-                      <li>{{ error }}</li>
-                    {% endfor %}
-                  {% endfor %}
-                </ul>
-              </div>
-            {% endif %}
+                            <!-- Password -->
+                            <div class="form-group mb-3">
+                                <label for="password1" class="form-label">Password</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="bi bi-lock"></i>
+                                    </span>
+                                    <input type="password"
+                                           id="password1"
+                                           name="password1" 
+                                           class="form-control" 
+                                           placeholder="Create a password"
+                                           required>
+                                    <button class="btn btn-light" type="button" id="togglePassword1">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                                {% if form.password1.errors %}
+                                    <div class="text-danger mt-1">
+                                        {% for error in form.password1.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
 
-            <!-- Form Fields -->
-            {% for field in form %}
-              <div class="mb-3">
-                <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
-                <!-- Apply the custom filter to add the form-control class -->
-                {{ field|add_class:"form-control" }}
-                {% if field.errors %}
-                  <div class="text-danger mt-1">
-                    {% for error in field.errors %}
-                      <small>{{ error }}</small>
-                    {% endfor %}
-                  </div>
-                {% endif %}
-              </div>
-            {% endfor %}
+                            <!-- Confirm Password -->
+                            <div class="form-group mb-3">
+                                <label for="password2" class="form-label">Confirm Password</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="bi bi-lock-fill"></i>
+                                    </span>
+                                    <input type="password"
+                                           id="password2"
+                                           name="password2" 
+                                           class="form-control" 
+                                           placeholder="Confirm your password"
+                                           required>
+                                    <button class="btn btn-light" type="button" id="togglePassword2">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                                {% if form.password2.errors %}
+                                    <div class="text-danger mt-1">
+                                        {% for error in form.password2.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
 
-            <!-- Submit Button -->
-            <button type="submit" class="btn btn-primary w-100 py-2">Register</button>
-          </form>
+                            <!-- Register Button -->
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-person-plus me-2"></i>Create Account
+                            </button>
+                        </form>
 
-          <p class="text-center mt-4 mb-0">
-            Already have an account? <a href="{% url 'login' %}" class="link-primary">Login here</a>.
-          </p>
+                        <!-- Login Link -->
+                        <p class="text-center mt-4 mb-0">
+                            Already have an account? 
+                            <a href="{% url 'login' %}" class="register-link">
+                                Sign in
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
-</div>
-{% endblock %}
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Password Toggle Functions
+            function setupPasswordToggle(inputId, toggleId) {
+                const toggleBtn = document.querySelector(`#${toggleId}`);
+                const input = document.querySelector(`#${inputId}`);
+
+                toggleBtn?.addEventListener('click', function() {
+                    const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                    input.setAttribute('type', type);
+                    this.querySelector('i').classList.toggle('bi-eye');
+                    this.querySelector('i').classList.toggle('bi-eye-slash');
+                });
+            }
+
+            // Setup both password toggles
+            setupPasswordToggle('password1', 'togglePassword1');
+            setupPasswordToggle('password2', 'togglePassword2');
+
+            // Form Validation
+            const form = document.querySelector('form');
+            form?.addEventListener('submit', function(event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            });
+
+            // Password Match Validation
+            const password2 = document.querySelector('#password2');
+            password2?.addEventListener('input', function() {
+                const password1 = document.querySelector('#password1');
+                if (this.value !== password1.value) {
+                    this.setCustomValidity('Passwords do not match');
+                } else {
+                    this.setCustomValidity('');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

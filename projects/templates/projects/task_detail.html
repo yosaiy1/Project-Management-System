@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-
+{% load custom_filters %} 
 {% load static %}
 
 {% block title %}{{ task.title }} - Task Detail{% endblock %}
@@ -9,21 +9,180 @@
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col">
-            <h2 class="text-center">{{ task.title }}</h2>
-            <p class="text-center">{{ task.description }}</p>
-            <p class="text-center"><strong>Assigned to:</strong> {{ task.assigned_to.username }}</p>
-            <p class="text-center"><strong>Start Date:</strong> {{ task.start_date }}</p>
-            <p class="text-center"><strong>Due Date:</strong> {{ task.due_date }}</p>
+<div class="container-fluid px-4">
+    <!-- Task Header -->
+    <div class="glass-card mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="mb-0">{{ task.title }}</h2>
+                <p class="text-muted mt-2">{{ task.description }}</p>
+            </div>
+            <div class="btn-group">
+                {% if can_edit %}
+                <a href="{% url 'task_update' task.project.id task.id %}" class="btn btn-outline-primary hover-translate">
+                    <i class="bi bi-pencil me-2"></i>Edit Task
+                </a>
+                <button type="button" 
+                        class="btn btn-outline-danger hover-translate"
+                        data-bs-toggle="modal" 
+                        data-bs-target="#deleteTaskModal">
+                    <i class="bi bi-trash me-2"></i>Delete Task
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Task Stats -->
+        <div class="row g-4">
+            <div class="col-md-3 col-sm-6">
+                <div class="glass-card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-person-circle display-6 text-primary mb-3"></i>
+                        <h3 class="h5 mb-2">{{ task.assigned_to.username }}</h3>
+                        <p class="text-muted mb-0">Assigned To</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="glass-card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-calendar-event display-6 text-info mb-3"></i>
+                        <h3 class="h5 mb-2">{{ task.start_date|date:"M d, Y" }}</h3>
+                        <p class="text-muted mb-0">Start Date</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="glass-card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-calendar-check display-6 text-warning mb-3"></i>
+                        <h3 class="h5 mb-2">{{ task.due_date|date:"M d, Y" }}</h3>
+                        <p class="text-muted mb-0">Due Date</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="glass-card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-clock-history display-6 text-success mb-3"></i>
+                        <h3 class="h5 mb-2">{{ task.last_active|time_since }}</h3>
+                        <p class="text-muted mb-0">Last Activity</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col text-center">
-            <a href="{% url 'project_detail' task.project.id %}" class="btn btn-secondary">Back to Project</a>
+    <!-- Task Details -->
+    <div class="glass-card">
+        <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center py-3">
+            <h3 class="h5 mb-0">Task Details</h3>
+            <span class="badge bg-{{ task.status|task_status_color }}">{{ task.get_status_display }}</span>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-muted mb-3">Project</h6>
+                    <p class="mb-4">
+                        <a href="{% url 'project_detail' task.project.id %}" class="text-decoration-none">
+                            <i class="bi bi-folder me-2"></i>{{ task.project.name }}
+                        </a>
+                    </p>
+                    <h6 class="text-muted mb-3">Priority</h6>
+                    <p class="mb-4">
+                        <span class="badge bg-{{ task.priority|lower }}">{{ task.priority }}</span>
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-muted mb-3">Progress</h6>
+                    <div class="progress mb-4" style="height: 8px;">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ task.progress }}%"></div>
+                    </div>
+                    <h6 class="text-muted mb-3">Comments</h6>
+                    <p class="mb-0">{{ task.comments.count|default:0 }} comments</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="text-center mt-4">
+        <a href="{% url 'project_detail' task.project.id %}" class="btn btn-secondary hover-translate">
+            <i class="bi bi-arrow-left me-2"></i>Back to Project
+        </a>
+    </div>
+</div>
+
+<!-- Delete Task Modal -->
+<div class="modal fade" id="deleteTaskModal" tabindex="-1" aria-labelledby="deleteTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title" id="deleteTaskModalLabel">
+                    <i class="bi bi-exclamation-triangle text-danger me-2"></i>Delete Task
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-danger bg-danger bg-opacity-10 border-0">
+                    <p class="mb-2">Are you sure you want to delete task <strong>{{ task.title }}</strong>?</p>
+                    <small class="text-danger">This action cannot be undone.</small>
+                </div>
+            </div>
+            <div class="modal-footer border-top">
+                <form method="POST" action="{% url 'task_delete' task.project.id task.id %}" data-ajax>
+                    {% csrf_token %}
+                    <button type="button" class="btn btn-secondary hover-translate" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-danger hover-translate">
+                        <i class="bi bi-trash me-2"></i>Delete Task
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteForm = document.querySelector('form[data-ajax]');
+    
+    if (deleteForm) {
+        deleteForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalText = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Deleting...`;
+            
+            fetch(this.action, {
+                method: 'POST',
+                body: new FormData(this),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = "{% url 'project_detail' task.project.id %}";
+                } else {
+                    showToast('error', data.message || 'Error deleting task');
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalText;
+                }
+            })
+            .catch(error => {
+                showToast('error', 'Error deleting task');
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalText;
+            });
+        });
+    }
+});
+</script>
 {% endblock %}

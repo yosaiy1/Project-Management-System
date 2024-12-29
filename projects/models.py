@@ -85,16 +85,55 @@ class Team(models.Model):
         return self.name
 
 class TeamMember(models.Model):
+    ROLE_CHOICES = (
+        ('owner', 'Owner'),
+        ('admin', 'Admin'),
+        ('member', 'Member'),
+    )
+    
     team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='members')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='teams')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='team_memberships')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='member')
+    date_joined = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=['team', 'user'], name='unique_team_member')
         ]
 
-    def __str__(self):
-        return f"{self.user.username} - {self.team.name}"
+    @property
+    def projects(self):
+        """Get all projects associated with this team member"""
+        return self.team.projects.filter(team=self.team)
+
+    @property
+    def project_count(self):
+        """Get count of projects user is involved in within this team"""
+        return self.projects.count()
+
+    @property
+    def tasks(self):
+        """Get all tasks assigned to this team member"""
+        return Task.objects.filter(project__team=self.team, assigned_to=self.user)
+
+    @property
+    def task_count(self):
+        """Get count of tasks assigned to user within this team"""
+        return self.tasks.count()
+
+    @property
+    def completed_tasks_count(self):
+        """Get count of completed tasks by user within this team"""
+        return self.tasks.filter(status='done').count()
+
+    @property
+    def project_completion_rate(self):
+        """Calculate project completion rate for this member"""
+        total = self.project_count
+        if not total:
+            return 0
+        completed = self.projects.filter(status='completed').count()
+        return int((completed / total) * 100)
 
 class Project(models.Model):
     STATUS_CHOICES = [
@@ -153,6 +192,8 @@ class Task(models.Model):
     tracker = FieldTracker(fields=['status'])
     completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)  # Add this field
+    last_active = models.DateTimeField(auto_now=True)  # Add this field
 
     def clean(self):
         if self.start_date and self.due_date and self.start_date > self.due_date:

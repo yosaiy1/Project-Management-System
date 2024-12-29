@@ -1,56 +1,250 @@
 {% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
 
 {% block title %}Tasks | {{ block.super }}{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/task_list.css' %}">
+{% endblock %}
+
 {% block content %}
-<div class="container">
-    <h1 class="mb-4">My Tasks</h1>
-    
-    <div class="row">
+{% csrf_token %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">My Tasks</h2>
+        <div class="d-flex gap-3">
+            <div class="search-wrapper">
+                <input type="search" 
+                       class="form-control" 
+                       id="taskSearch" 
+                       placeholder="Search tasks..."
+                       aria-label="Search tasks">
+            </div>
+            <a href="{% url 'task_create' %}" class="btn btn-primary hover-translate">
+                <i class="bi bi-plus-lg me-2"></i>Add Task
+            </a>
+        </div>
+    </div>
+
+    <!-- Task Stats -->
+    <div class="row g-4 mb-4">
+        {% with stats_data=task_stats %}
+        <div class="col-md-3 col-sm-6">
+            <div class="glass-card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-list-check display-6 text-primary mb-3"></i>
+                    <h3 class="h2 mb-2" data-stat="todo">{{ todo_tasks|length }}</h3>
+                    <p class="text-muted mb-0">To Do</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="glass-card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-arrow-repeat display-6 text-info mb-3"></i>
+                    <h3 class="h2 mb-2" data-stat="inprogress">{{ inprogress_tasks|length }}</h3>
+                    <p class="text-muted mb-0">In Progress</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="glass-card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-check2-circle display-6 text-success mb-3"></i>
+                    <h3 class="h2 mb-2" data-stat="done">{{ done_tasks|length }}</h3>
+                    <p class="text-muted mb-0">Completed</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="glass-card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-graph-up display-6 text-warning mb-3"></i>
+                    <h3 class="h2 mb-2" data-stat="completion">{{ completion_rate|default:0 }}%</h3>
+                    <p class="text-muted mb-0">Completion Rate</p>
+                </div>
+            </div>
+        </div>
+        {% endwith %}
+    </div>
+
+    <!-- Kanban Board -->
+    <div class="row g-4" id="kanbanBoard">
+        <!-- Todo Column -->
         <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
+            <div class="glass-card h-100">
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">To Do</h5>
+                    <span class="badge bg-todo" data-count="todo">{{ todo_tasks|length }}</span>
                 </div>
-                <div class="card-body">
-                    {% for task in todo_tasks %}
-                        {% include 'projects/includes/task_card.html' %}
-                    {% empty %}
-                        <p class="text-muted">No tasks to do</p>
-                    {% endfor %}
+                <div class="card-body p-3">
+                    <div class="task-list" data-status="todo" aria-label="Todo tasks">
+                        {% for task in todo_tasks %}
+                            {% include "projects/includes/task_card.html" with task=task %}
+                        {% empty %}
+                            {% include "projects/includes/empty_state.html" with message="No tasks to do" %}
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>
-        
+
+        <!-- In Progress Column -->
         <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
+            <div class="glass-card h-100">
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">In Progress</h5>
+                    <span class="badge bg-inprogress" data-count="inprogress">{{ inprogress_tasks|length }}</span>
                 </div>
-                <div class="card-body">
-                    {% for task in inprogress_tasks %}
-                        {% include 'projects/includes/task_card.html' %}
-                    {% empty %}
-                        <p class="text-muted">No tasks in progress</p>
-                    {% endfor %}
+                <div class="card-body p-3">
+                    <div class="task-list" data-status="inprogress" aria-label="In progress tasks">
+                        {% for task in inprogress_tasks %}
+                            {% include "projects/includes/task_card.html" with task=task %}
+                        {% empty %}
+                            {% include "projects/includes/empty_state.html" with message="No tasks in progress" %}
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>
-        
+
+        <!-- Done Column -->
         <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
+            <div class="glass-card h-100">
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Done</h5>
+                    <span class="badge bg-done" data-count="done">{{ done_tasks|length }}</span>
                 </div>
-                <div class="card-body">
-                    {% for task in done_tasks %}
-                        {% include 'projects/includes/task_card.html' %}
-                    {% empty %}
-                        <p class="text-muted">No completed tasks</p>
-                    {% endfor %}
+                <div class="card-body p-3">
+                    <div class="task-list" data-status="done" aria-label="Completed tasks">
+                        {% for task in done_tasks %}
+                            {% include "projects/includes/task_card.html" with task=task %}
+                        {% empty %}
+                            {% include "projects/includes/empty_state.html" with message="No completed tasks" %}
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const taskSystem = {
+        init() {
+            this.setupSearch();
+            this.setupKanban();
+        },
+
+        setupSearch() {
+            const searchInput = document.getElementById('taskSearch');
+            const taskCards = document.querySelectorAll('.task-card');
+
+            searchInput?.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                this.filterTasks(taskCards, searchTerm);
+            });
+        },
+
+        filterTasks(cards, term) {
+            cards.forEach(card => {
+                const title = card.querySelector('h6').textContent.toLowerCase();
+                const description = card.querySelector('p').textContent.toLowerCase();
+                const matches = title.includes(term) || description.includes(term);
+                card.style.display = matches ? 'block' : 'none';
+                this.updateTaskCounts();
+            });
+        },
+
+        setupKanban() {
+            document.querySelectorAll('.task-list').forEach(list => {
+                new Sortable(list, {
+                    group: 'shared-tasks',
+                    animation: 150,
+                    ghostClass: 'task-ghost',
+                    dragClass: 'task-drag',
+                    handle: '.task-drag-handle',
+                    onEnd: this.handleTaskMove.bind(this)
+                });
+            });
+        },
+
+        async handleTaskMove(evt) {
+            const taskId = evt.item.dataset.taskId;
+            const newStatus = evt.to.dataset.status;
+            
+            try {
+                const response = await this.updateTaskStatus(taskId, newStatus);
+                if (response.success) {
+                    window.projectHub.utils.showToast('success', 'Task status updated');
+                    this.updateTaskCounts();
+                } else {
+                    throw new Error(response.message || 'Failed to update task status');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                window.projectHub.utils.showToast('error', error.message);
+                evt.item.revert();
+            }
+        },
+
+        async updateTaskStatus(taskId, status) {
+            try {
+                const response = await fetch(`/api/tasks/${taskId}/update-status/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ status })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to update task status');
+                }
+                
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error(data.message || 'Failed to update task status');
+                }
+                
+                return data;
+            } catch (error) {
+                console.error('Task status update error:', error);
+                throw error;
+            }
+        },
+
+        updateTaskCounts() {
+            document.querySelectorAll('.task-list').forEach(list => {
+                const count = list.querySelectorAll('.task-card:not([style*="display: none"])').length;
+                const status = list.dataset.status;
+                const badge = document.querySelector(`[data-count="${status}"]`);
+                const stat = document.querySelector(`[data-stat="${status}"]`);
+                
+                if (badge) badge.textContent = count;
+                if (stat) stat.textContent = count;
+            });
+            this.updateCompletionRate();
+        },
+
+        updateCompletionRate() {
+            const total = Array.from(document.querySelectorAll('.task-card')).length;
+            const done = document.querySelector('[data-stat="done"]')?.textContent || 0;
+            const rate = total ? Math.round((done / total) * 100) : 0;
+            document.querySelector('[data-stat="completion"]').textContent = `${rate}%`;
+        }
+    };
+
+    taskSystem.init();
+});
+</script>
 {% endblock %}

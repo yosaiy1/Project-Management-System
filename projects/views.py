@@ -7,8 +7,12 @@ from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.db import transaction
 from django.contrib.auth import update_session_auth_hash, login, authenticate, logout
 from django.contrib.auth.forms import PasswordChangeForm, AuthenticationForm
+from django.core.serializers.json import DjangoJSONEncoder
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q
+from django.db.models import (
+    Count, F, Q, Subquery, OuterRef, FloatField, ExpressionWrapper,
+    functions
+)
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.core.paginator import Paginator
@@ -33,7 +37,8 @@ from .utils.analytics import (
     get_task_distribution,
     get_team_performance,
     get_completion_trend,
-    get_timeline_labels
+    get_timeline_labels,
+    get_completed_tasks_data
 )
 from .utils.team import get_user_team_members
 from .utils.tasks import get_user_tasks, get_recent_activity
@@ -65,6 +70,8 @@ from .utils.constants import (
     MSG_LOGOUT_SUCCESS,
     MSG_INVALID_REQUEST
 )
+
+Cast = functions.Cast
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -327,23 +334,67 @@ def team_detail(request, team_id):
 
 @login_required
 @handle_view_errors
-def analytics_view(request):
-    if not request.user.is_staff:
-        messages.error(request, MSG_PERMISSION_DENIED)
-        return redirect('homepage')
+def analytics_data(request):
+    """API endpoint for analytics data"""
+    try:
+        time_range = int(request.GET.get('range', 7))
+        user = request.user
         
-    context = {
-        'task_distribution': get_task_distribution(request.user),
-        'team_performance': get_team_performance(request.user),
-        'completion_trend': get_completion_trend(request.user),
-        'timeline_labels': get_timeline_labels(),
-        'total_projects': Project.objects.count(),
-        'total_tasks': Task.objects.count(),
-        'active_tasks': Task.objects.filter(status='inprogress').count(),
-        'team_members': TeamMember.objects.count(),  # Add this
-        'completion_rate': calculate_completion_rate(request.user)  # Add this
-    }
-    return render(request, 'projects/analytics.html', context)
+        try:
+            data = {
+                'timelineLabels': get_timeline_labels(),
+                'completedTasksData': get_completed_tasks_data(user, time_range),
+                'taskDistribution': get_task_distribution(user),
+                'teamLabels': [team.name for team in Team.objects.filter(members__user=user)],
+                'teamPerformance': get_team_performance(user),
+                'trendLabels': get_timeline_labels(),
+                'completionTrend': get_completion_trend(user, time_range)  # Add time_range parameter
+            }
+            
+            return JsonResponse(data)
+        except Exception as e:
+            raise ValueError(f"Error processing analytics data: {str(e)}")
+            
+    except Exception as e:
+        logger.error(f"Analytics data error: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'error': 'Failed to fetch analytics data',
+            'message': str(e)
+        }, status=500)
+
+@login_required
+@handle_view_errors
+def analytics_view(request):
+    """View for analytics dashboard"""
+    try:
+        # Get timeline data
+        timeline_data = get_timeline_labels()
+        completed_tasks = get_completed_tasks_data(request.user)
+        task_dist = get_task_distribution(request.user)
+        teams = Team.objects.filter(members__user=request.user)
+        team_labels = [team.name for team in teams]
+        team_perf = get_team_performance(request.user)
+        completion_trend = get_completion_trend(request.user)
+        
+        context = {
+            'timeline_labels': json.dumps(timeline_data, cls=DjangoJSONEncoder),
+            'completed_tasks_data': json.dumps(completed_tasks, cls=DjangoJSONEncoder),
+            'task_distribution': json.dumps(task_dist, cls=DjangoJSONEncoder),
+            'team_labels': json.dumps(team_labels, cls=DjangoJSONEncoder),
+            'team_performance': json.dumps(team_perf, cls=DjangoJSONEncoder),
+            'trend_labels': json.dumps(timeline_data, cls=DjangoJSONEncoder),
+            'completion_trend': json.dumps(completion_trend, cls=DjangoJSONEncoder),
+            'total_projects': Project.objects.count(),
+            'active_tasks': Task.objects.exclude(status='done').count(),
+            'team_members': User.objects.filter(is_active=True).count(),
+            'completion_rate': calculate_completion_rate(request.user)
+        }
+        return render(request, 'projects/analytics.html', context)
+        
+    except Exception as e:
+        logger.error(f"Analytics view error: {str(e)}", exc_info=True)
+        messages.error(request, "Failed to load analytics")
+        return redirect('homepage')
 
 # API Views
 @login_required
@@ -351,24 +402,47 @@ def analytics_view(request):
 @transaction_handler
 def update_task_status(request, task_id):
     if request.method != 'POST':
-        return JsonResponse({'status': 'error', 'message': MSG_INVALID_REQUEST})
+        return JsonResponse({'success': False, 'message': 'Invalid request method'})
     
     try:
         task = get_object_or_404(Task, id=task_id)
         if not has_task_permission(request.user, task):
-            return JsonResponse({'status': 'error', 'message': MSG_PERMISSION_DENIED})
+            return JsonResponse({
+                'success': False, 
+                'message': MSG_PERMISSION_DENIED
+            }, status=403)
         
         data = json.loads(request.body)
         new_status = data.get('status')
-        if new_status:
-            task.status = new_status
-            if new_status == TASK_STATUS_DONE:
-                task.completed_at = timezone.now()
-            task.save()
-            return JsonResponse({'status': 'success'})
+        
+        if new_status not in dict(Task.STATUS_CHOICES).keys():
+            return JsonResponse({
+                'success': False,
+                'message': 'Invalid status value'
+            }, status=400)
+            
+        task.status = new_status
+        task.last_active = timezone.now()
+        if new_status == 'done':
+            task.completed_at = timezone.now()
+        task.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Task status updated successfully',
+            'task': {
+                'id': task.id,
+                'status': task.status,
+                'completion_rate': calculate_completion_rate(request.user)
+            }
+        })
+            
     except Exception as e:
         logger.error(f"Task status update error: {str(e)}")
-        return JsonResponse({'status': 'error', 'message': MSG_ERROR})
+        return JsonResponse({
+            'success': False, 
+            'message': MSG_ERROR
+        }, status=500)
 
 # Profile Views
 @login_required
@@ -715,16 +789,74 @@ def mark_notification_as_read(request, notification_id):
             'message': 'Failed to mark notification as read'
         }, status=500)
 
-@login_required
+login_required
 @handle_view_errors
 def all_team_members(request):
     """View to display all team members across teams"""
-    teams = Team.objects.filter(members__user=request.user).distinct()
+    teams = Team.objects.filter(
+        members__user=request.user
+    ).prefetch_related(
+        'members',
+        'members__user',
+        'members__user__profile',
+        'projects',
+        'members__user__assigned_tasks'
+    ).annotate(
+        completion_rate=Subquery(
+            Task.objects.filter(
+                project__team=OuterRef('pk'),
+                status='done'
+            ).values('project__team')
+            .annotate(rate=ExpressionWrapper(
+                Cast(Count('id'), output_field=FloatField()) * 100.0 / 
+                Cast(Count('project'), output_field=FloatField()),
+                output_field=FloatField()
+            ))
+            .values('rate')[:1]
+        )
+    ).distinct()
+    
     context = {
         'teams': teams,
         'user_is_staff': request.user.is_staff
     }
     return render(request, 'projects/all_team_members.html', context)
+
+@login_required
+@handle_view_errors
+@transaction_handler
+def invite_team_member(request, team_id):
+    """Handle team member invitation"""
+    team = get_object_or_404(Team, id=team_id)
+    if not can_manage_team(request.user, team):
+        messages.error(request, MSG_PERMISSION_DENIED)
+        return redirect('team_detail', team_id=team_id)
+
+    try:
+        if request.method == 'POST':
+            email = request.POST.get('email')
+            role = request.POST.get('role', 'member')
+            
+            try:
+                user = User.objects.get(email=email)
+                if not TeamMember.objects.filter(team=team, user=user).exists():
+                    TeamMember.objects.create(
+                        team=team,
+                        user=user,
+                        role=role
+                    )
+                    messages.success(request, f'Successfully added {user.username} to the team.')
+                else:
+                    messages.warning(request, 'User is already a member of this team.')
+            except User.DoesNotExist:
+                messages.error(request, 'No user found with that email address.')
+            
+        return redirect('all_team_members')
+            
+    except Exception as e:
+        logger.error(f"Team member invitation error: {str(e)}")
+        messages.error(request, MSG_ERROR)
+        return redirect('all_team_members')
 
 @login_required
 @handle_view_errors
@@ -765,14 +897,31 @@ def project_update(request, project_id):
 def project_delete(request, project_id):
     project = get_object_or_404(Project, id=project_id)
     if not has_project_permission(request.user, project):
-        messages.error(request, MSG_PERMISSION_DENIED)
-        return redirect('project_list')
+        return JsonResponse({
+            'success': False,
+            'message': MSG_PERMISSION_DENIED
+        }, status=403)
         
     if request.method == 'POST':
-        project.delete()
-        messages.success(request, 'Project deleted successfully!')
-        return redirect('project_list')
-    return render(request, 'projects/project_confirm_delete.html', {'project': project})
+        try:
+            project.delete()
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Project deleted successfully!'
+                })
+            messages.success(request, 'Project deleted successfully!')
+            return redirect('project_list')
+        except Exception as e:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': str(e)
+                }, status=500)
+            messages.error(request, f'Error deleting project: {str(e)}')
+            return redirect('project_detail', project_id=project_id)
+            
+    return render(request, 'projects/project_detail.html', {'project': project})
 
 @login_required
 @handle_view_errors
@@ -823,11 +972,17 @@ def team_members(request, team_id):
 @handle_view_errors
 def task_list(request):
     """View to display all tasks for the current user"""
-    tasks = get_user_tasks(request.user)
-    paginator = Paginator(tasks, 10)
-    page = request.GET.get('page')
-    tasks = paginator.get_page(page)
-    return render(request, 'projects/task_list.html', {'tasks': tasks})
+    # Get tasks by status using the helper function
+    tasks_by_status = get_tasks_by_status(request.user)
+    
+    context = {
+        'todo_tasks': tasks_by_status['todo_tasks'],
+        'inprogress_tasks': tasks_by_status['inprogress_tasks'],
+        'done_tasks': tasks_by_status['done_tasks'],
+        'completion_rate': calculate_completion_rate(request.user)
+    }
+    
+    return render(request, 'projects/task_list.html', context)
 
 def base_context(request):
     """Context processor to add common data to all templates"""
@@ -1070,4 +1225,16 @@ def notification_list(request):
     return render(request, 'projects/notifications.html', {
         'notifications': notifications,
         'unread_count': unread_count
-    })          
+    })
+
+def handler404(request, exception):
+    """Custom 404 error handler"""
+    return render(request, 'errors/404.html', status=404)
+
+def handler500(request):
+    """Custom 500 error handler"""
+    return render(request, 'errors/500.html', status=500)
+
+def handler403(request, exception):
+    """Custom 403 error handler"""
+    return render(request, 'errors/403.html', status=403)   

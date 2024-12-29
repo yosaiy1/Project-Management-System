@@ -1,0 +1,22 @@
+<div class="task-card glass-card hoverable mb-3" data-task-id="{{ task.id }}">
+    <div class="task-drag-handle cursor-move">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h6 class="mb-0">{{ task.title }}</h6>
+            <span class="badge bg-{{ task.priority|lower }}">{{ task.priority }}</span>
+        </div>
+        <p class="text-muted small mb-2">{{ task.description|truncatechars:100 }}</p>
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <img src="{{ task.assigned_to.profile.avatar.url|default:'/static/images/default-avatar.png' }}" 
+                     alt="{{ task.assigned_to.username }}"
+                     class="rounded-circle"
+                     width="24" height="24">
+                <small class="text-muted">{{ task.due_date|date:"M d" }}</small>
+            </div>
+            <a href="{% url 'task_detail' task.project.id task.id %}" 
+               class="btn btn-sm btn-outline-primary hover-translate">
+                <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+</div>

@@ -1,115 +1,112 @@
-/* General Container Styling */
-.container {
-    margin-top: 2rem;
+/* Delete Project Modal */
+.modal-content.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
 }
 
-/* Section Headers */
-h2, h3 {
-    font-weight: 700;
-    color: #333;
-    margin-bottom: 1rem;
+.modal-header {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
 }
 
-/* Card Styling */
-.card {
-    border: none;
-    border-radius: 0.75rem;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-}
-
-.card-title {
+.modal-header .modal-title {
     font-size: 1.25rem;
     font-weight: 600;
-    color: #007aff;
+    color: var(--text-primary);
 }
 
-.card-text {
-    color: #666;
-    margin-bottom: 1rem;
+.modal-body {
+    padding: var(--spacing-lg);
 }
 
-.card-footer {
-    background-color: #f8f9fa;
-    border-top: none;
+/* Alert in Modal */
+.alert.bg-danger.bg-opacity-10 {
+    background: rgba(239, 68, 68, 0.1) !important;
+    border-left: 4px solid var(--danger);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md) var(--spacing-lg);
+}
+
+.alert p {
+    color: var(--text-primary);
     font-size: 0.875rem;
-    color: #999;
+    margin-bottom: 0.5rem;
 }
 
-/* Button Styling */
-.btn-outline-primary {
-    border-color: #007aff;
-    color: #007aff;
-    transition: background-color 0.3s ease, color 0.3s ease;
+.alert small {
+    color: var(--danger);
+    font-size: 0.75rem;
 }
 
-.btn-outline-primary:hover {
-    background-color: #007aff;
-    color: #fff;
+/* Modal Footer */
+.modal-footer {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-top: 1px solid var(--border-color);
+    gap: var(--spacing-sm);
 }
 
-.btn-primary {
-    background-color: #007aff;
-    border-color: #007aff;
-    transition: background-color 0.3s ease, color 0.3s ease;
+/* Button Styles */
+.modal-footer .btn {
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all var(--transition-normal);
 }
 
-.btn-primary:hover {
-    background-color: #0056b3;
-    border-color: #0056b3;
+.btn.hover-translate {
+    transform: translateY(0);
+}
+
+.btn.hover-translate:hover {
+    transform: translateY(-2px);
 }
 
 .btn-secondary {
-    background-color: #6c757d;
-    border-color: #6c757d;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
 }
 
-.btn-secondary:hover {
-    background-color: #5a6268;
-    border-color: #545b62;
+.btn-danger {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: white;
 }
 
-/* Empty State Styling */
-.text-center {
-    color: #666;
-    font-size: 1rem;
+/* Loading State */
+.btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
 }
 
-.text-center a {
-    color: #007aff;
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.text-center a:hover {
-    text-decoration: underline;
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    border-width: 0.15em;
 }
 
 /* Responsive Adjustments */
 @media (max-width: 768px) {
-    .card {
-        margin-bottom: 1.5rem;
+    .modal-dialog {
+        margin: 1rem;
     }
-
-    .card-title {
-        font-size: 1.1rem;
+    
+    .modal-body {
+        padding: var(--spacing-md);
     }
-
-    .card-text {
-        font-size: 0.9rem;
+    
+    .modal-footer {
+        flex-direction: column-reverse;
+        gap: var(--spacing-sm);
     }
-
-    .card-footer {
-        font-size: 0.8rem;
-    }
-
-    .btn-outline-primary, .btn-primary, .btn-secondary {
-        font-size: 0.9rem;
+    
+    .modal-footer .btn {
+        width: 100%;
     }
 }

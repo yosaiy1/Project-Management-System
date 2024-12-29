@@ -1,41 +1,142 @@
-<!-- filepath: /c:/Users/paulx/Python Project/Project Management App/projects/templates/profiles/view_profile.html -->
 {% extends 'base.html' %}
-
 {% load static %}
 
-{% block title %}View Profile{% endblock %}
+{% block title %}Profile | Project Hub{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/view_profile.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="card mt-5">
-        <div class="card-header bg-primary text-white">
-            <!-- Display Full Name (first_name and last_name) -->
-            <h2>Profile of {{ profile.user.first_name }} {{ profile.user.last_name }}</h2>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-4 text-center">
-                    {% if profile.profile_picture %}
-                        <img src="{{ profile.profile_picture.url }}" alt="Profile Picture" class="img-fluid rounded-circle">
-                    {% else %}
-                        <img src="https://via.placeholder.com/150" alt="Default Profile Picture" class="img-fluid rounded-circle">
-                    {% endif %}
+<div class="container mt-4">
+    <!-- Header Section -->
+    <div class="section-header mb-4">
+        <h2 class="gradient-text text-center">Profile Overview</h2>
+        <p class="text-muted text-center">Manage your personal information and settings</p>
+    </div>
+
+    <!-- Profile Content -->
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="glass-card profile-card">
+                <!-- Profile Header -->
+                <div class="profile-header text-center">
+                    <div class="avatar-wrapper" id="avatarWrapper">
+                        {% if profile.profile_picture %}
+                            <img src="{{ profile.profile_picture.url }}" alt="Profile" class="profile-avatar">
+                        {% else %}
+                            <div class="avatar-placeholder">
+                                {{ user.username|slice:":1"|upper }}
+                            </div>
+                        {% endif %}
+                        <button class="avatar-upload-btn" id="uploadAvatarBtn" aria-label="Upload profile picture">
+                            <i class="bi bi-camera"></i>
+                        </button>
+                    </div>
+                    <h3 class="profile-name">{{ user.get_full_name|default:user.username }}</h3>
+                    <p class="profile-email text-gradient">{{ user.email }}</p>
                 </div>
-                <div class="col-md-8">
-                    <p><strong>Username:</strong> {{ profile.user.username }}</p>
-                    <p><strong>Email:</strong> {{ profile.user.email }}</p>
-                    <p><strong>Bio:</strong> {{ profile.bio }}</p>
-                    <p><strong>Date of Birth:</strong> {{ profile.date_of_birth }}</p>
-                    <p><strong>Phone Number:</strong> {{ profile.phone_number }}</p>
-                    <a href="{% url 'update_profile' %}" class="btn btn-warning">Update Profile</a>
-                    <a href="{% url 'delete_account' %}" class="btn btn-danger ml-2">Delete Account</a>
+
+                <!-- Profile Stats -->
+                <div class="profile-stats">
+                    <div class="row g-3">
+                        <div class="col-4">
+                            <div class="stat-card">
+                                <div class="stat-value">{{ projects_count|default:0 }}</div>
+                                <div class="stat-label">Projects</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-card">
+                                <div class="stat-value">{{ tasks_count|default:0 }}</div>
+                                <div class="stat-label">Tasks</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-card">
+                                <div class="stat-value">{{ completion_rate|default:0 }}%</div>
+                                <div class="stat-label">Completed</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Information -->
+                <div class="row g-4 mt-4">
+                    <div class="col-md-6">
+                        <div class="info-section">
+                            <h5 class="section-title">Personal Information</h5>
+                            <ul class="info-list">
+                                <li class="info-item">
+                                    <i class="bi bi-person"></i>
+                                    <span class="label">Username:</span>
+                                    <span class="value">{{ user.username }}</span>
+                                </li>
+                                {% if profile.phone_number %}
+                                <li class="info-item">
+                                    <i class="bi bi-telephone"></i>
+                                    <span class="label">Phone:</span>
+                                    <span class="value">{{ profile.phone_number }}</span>
+                                </li>
+                                {% endif %}
+                                {% if profile.date_of_birth %}
+                                <li class="info-item">
+                                    <i class="bi bi-calendar"></i>
+                                    <span class="label">Date of Birth:</span>
+                                    <span class="value">{{ profile.date_of_birth }}</span>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-section">
+                            <h5 class="section-title">Bio</h5>
+                            <p class="bio-text">{{ profile.bio|default:"No bio available" }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons mt-5 text-center">
+                    <a href="{% url 'update_profile' %}" class="btn btn-primary me-2">
+                        <i class="bi bi-pencil"></i> Edit Profile
+                    </a>
+                    <a href="{% url 'settings' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-gear"></i> Settings
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Upload Avatar Modal -->
+<div class="modal fade" id="uploadAvatarModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Profile Picture</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="avatarForm" method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="avatarInput" class="form-label">Choose Image</label>
+                        <input type="file" class="form-control" id="avatarInput" name="profile_picture" accept="image/*">
+                    </div>
+                    <div class="preview-area mb-3 d-none">
+                        <img id="avatarPreview" src="#" alt="Preview" class="img-fluid rounded">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Upload</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/profile.js' %}"></script>
 {% endblock %}

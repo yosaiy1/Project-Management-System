@@ -20,11 +20,11 @@ import json
 import logging
 
 # Local imports
-from .models import Team, Project, Task, Profile, Notification, TeamMember
+from .models import Team, Project, Task, Profile, Notification, TeamMember, File, User
 from .forms import (
     ProfileForm, TeamMemberForm, ReportForm,
     ProjectSearchForm, TeamSearchForm, ProjectForm, 
-    TaskForm, CustomUserCreationForm
+    TaskForm, CustomUserCreationForm, FileForm
 )
 
 # Utils imports
@@ -57,6 +57,7 @@ from .utils.constants import (
     MSG_PERMISSION_DENIED,
     MSG_SUCCESS,
     MSG_ERROR,
+    MSG_FILE_UPLOAD_ERROR,
     TASK_STATUS_DONE,
     TASK_STATUS_IN_PROGRESS,
     NOTIFICATION_SUCCESS,
@@ -69,39 +70,72 @@ from .utils.constants import (
 logger = logging.getLogger(__name__)
 
 # Core Views
+def get_tasks_by_status(user):
+    """Helper to get tasks organized by status"""
+    tasks = Task.objects.filter(assigned_to=user).select_related('project')
+    return {
+        'todo_tasks': tasks.filter(status='todo'),
+        'inprogress_tasks': tasks.filter(status='inprogress'),
+        'done_tasks': tasks.filter(status='done')
+    }
+
 @login_required
 @handle_view_errors
 def homepage(request):
     try:
-        projects = get_user_projects(request.user)
-        tasks = get_user_tasks(request.user)
+        # Get base context
         context = get_common_context(request.user)
+        
+        # Get tasks organized by status
+        tasks_by_status = get_tasks_by_status(request.user)
+        
+        # Add page-specific data
         context.update({
-            'projects': projects,
-            'tasks': tasks,
-            'recent_activity': get_recent_activity(request.user)
+            'projects': get_user_projects(request.user)[:5],
+            'tasks': get_user_tasks(request.user),
+            'recent_activity': get_recent_activity(request.user),
+            'completion_rate': calculate_completion_rate(request.user),
+            # Add Kanban board data
+            'todo_tasks': tasks_by_status['todo_tasks'],
+            'inprogress_tasks': tasks_by_status['inprogress_tasks'],
+            'done_tasks': tasks_by_status['done_tasks'],
+            'pending_tasks_count': Task.objects.filter(
+                assigned_to=request.user
+            ).exclude(status='done').count()
         })
+        
         return render(request, 'projects/homepage.html', context)
     except Exception as e:
-        logger.error(f"Homepage error: {str(e)}")
+        logger.error(f"Homepage error: {str(e)}", exc_info=True)
         messages.error(request, MSG_ERROR)
         return redirect('login')
 
 # Authentication Views
 @handle_view_errors
 def register(request):
+    if request.user.is_authenticated:
+        return redirect('homepage')
+        
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)
-            messages.success(request, 'Registration successful!')
-            return redirect('homepage')
-        else:
-            for error in form.errors.values():
-                messages.error(request, error)
+        try:
+            if form.is_valid():
+                user = form.save()
+                # Create associated profile
+                Profile.objects.create(user=user)
+                login(request, user)
+                messages.success(request, 'Registration successful!')
+                return redirect('homepage')
+            else:
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f"{field}: {error}")
+        except Exception as e:
+            logger.error(f"Registration error: {str(e)}", exc_info=True)
+            messages.error(request, "Registration failed. Please try again.")
     else:
         form = CustomUserCreationForm()
+    
     return render(request, 'registration/register.html', {'form': form})
 
 @handle_view_errors
@@ -341,14 +375,19 @@ def update_task_status(request, task_id):
 @handle_view_errors
 def view_profile(request):
     try:
-        # Get or create profile for user
         profile, created = Profile.objects.get_or_create(user=request.user)
         if created:
-            # Set default values if needed
             profile.save()
             messages.info(request, "Profile created successfully!")
             
-        return render(request, 'profile/view_profile.html', {'profile': profile})  # Update path
+        context = {
+            'profile': profile,
+            'user': request.user,
+            'projects_count': Project.objects.filter(team__members__user=request.user).count(),
+            'tasks_count': Task.objects.filter(assigned_to=request.user).count(),
+            'completion_rate': calculate_completion_rate(request.user)
+        }
+        return render(request, 'profile/view_profile.html', context)
     except Exception as e:
         logger.error(f"Profile view error: {str(e)}")
         messages.error(request, "Error accessing profile")
@@ -359,14 +398,14 @@ def view_profile(request):
 @transaction_handler
 def update_profile(request):
     if request.method == 'POST':
-        form = ProfileForm(request.POST, instance=request.user.profile)
+        form = ProfileForm(request.POST, request.FILES, instance=request.user.profile)
         if form.is_valid():
             form.save()
             messages.success(request, 'Profile updated successfully!')
             return redirect('view_profile')
     else:
         form = ProfileForm(instance=request.user.profile)
-    return render(request, 'profile/update_profile.html', {'form': form})  # Update path
+    return render(request, 'profile/update_profile.html', {'form': form})
 
 @login_required
 @handle_view_errors
@@ -382,7 +421,15 @@ def delete_account(request):
 @login_required
 @handle_view_errors
 def settings_view(request):
-    return render(request, 'projects/settings.html')
+    """User settings view"""
+    context = {
+        'user': request.user,
+        'profile': request.user.profile,
+        'notifications_enabled': True,
+        'form': PasswordChangeForm(request.user),
+        'teams': Team.objects.filter(members__user=request.user).distinct()
+    }
+    return render(request, 'settings/settings.html', context)
 
 @login_required
 @handle_view_errors
@@ -511,31 +558,54 @@ def remove_team_member(request, team_id, member_id):
 @login_required
 @handle_view_errors
 def search_view(request):
-    query = request.GET.get('q', '')
-    if query:
+    try:
+        query = request.GET.get('q', '').strip()
+        if len(query) < 2:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Query too short'
+            })
+
+        # Search projects and tasks
         projects = Project.objects.filter(
-            Q(name__icontains=query) | 
-            Q(description__icontains=query),
-            team__members__user=request.user
-        ).distinct()
-        
+            Q(title__icontains=query) | 
+            Q(description__icontains=query)
+        )[:5]
+
         tasks = Task.objects.filter(
-            Q(title__icontains=query) |
-            Q(description__icontains=query),
-            project__team__members__user=request.user
-        ).distinct()
-    else:
-        projects = Project.objects.none()
-        tasks = Task.objects.none()
+            Q(title__icontains=query) | 
+            Q(description__icontains=query)
+        )[:5]
+
+        results = []
         
-    context = {
-        'query': query,
-        'projects': projects,
-        'tasks': tasks
-    }
-    return render(request, 'projects/search_results.html', context)
+        for project in projects:
+            results.append({
+                'type': 'project',
+                'title': project.title,
+                'url': f'/projects/{project.id}/'
+            })
+            
+        for task in tasks:
+            results.append({
+                'type': 'task',
+                'title': task.title,
+                'url': f'/tasks/{task.id}/'
+            })
+
+        return JsonResponse({
+            'status': 'success',
+            'results': results
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
 
 @login_required
+@csrf_exempt
 @handle_view_errors
 def api_search(request):
     query = request.GET.get('q', '').strip()
@@ -590,23 +660,60 @@ def api_search(request):
 @login_required
 @transaction_handler
 def clear_all_notifications(request):
+    """Clear all notifications for current user"""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+        
     try:
-        Notification.objects.filter(user=request.user).delete()
-        return JsonResponse({'status': 'success'})
+        count = Notification.objects.filter(user=request.user).delete()[0]
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Cleared {count} notifications',
+            'unread_count': 0
+        })
     except Exception as e:
         logger.error(f"Clear notifications error: {str(e)}")
-        return JsonResponse({'status': 'error', 'message': MSG_ERROR})
+        return JsonResponse({
+            'status': 'error', 
+            'message': 'Failed to clear notifications'
+        }, status=500)
 
 @login_required
 def mark_notification_as_read(request, notification_id):
+    """Mark specific notification as read"""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+        
     try:
-        notification = get_object_or_404(Notification, id=notification_id, user=request.user)
+        notification = get_object_or_404(
+            Notification, 
+            id=notification_id, 
+            user=request.user
+        )
         notification.read = True
         notification.save()
-        return JsonResponse({'status': 'success'})
+        
+        unread_count = Notification.objects.filter(
+            user=request.user, 
+            read=False
+        ).count()
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Notification marked as read',
+            'unread_count': unread_count
+        })
+    except Notification.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Notification not found'
+        }, status=404)
     except Exception as e:
         logger.error(f"Mark notification error: {str(e)}")
-        return JsonResponse({'status': 'error', 'message': MSG_ERROR})
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Failed to mark notification as read'
+        }, status=500)
 
 @login_required
 @handle_view_errors
@@ -725,45 +832,36 @@ def task_list(request):
 def base_context(request):
     """Context processor to add common data to all templates"""
     if request.user.is_authenticated:
+        user_teams = Team.objects.filter(members__user=request.user).distinct()
+        user_tasks = Task.objects.filter(assigned_to=request.user)
+        
         return {
             'unread_notifications': Notification.objects.filter(
                 user=request.user, 
                 read=False
             ).count(),
-            'user_teams': Team.objects.filter(
-                members__user=request.user
-            ).distinct(),
+            'user_teams': user_teams,
             'team_members_count': TeamMember.objects.filter(
-                team__members__user=request.user
+                team__in=user_teams
             ).distinct().count(),
-            'completed_tasks_count': Task.objects.filter(
-                assigned_to=request.user,
+            'completed_tasks_count': user_tasks.filter(
                 status=TASK_STATUS_DONE
             ).count(),
-            'tasks_count': Task.objects.filter(
-                assigned_to=request.user
-            ).count()
+            'tasks_count': user_tasks.count(),
+            'projects_count': Project.objects.filter(
+                team__in=user_teams
+            ).distinct().count(),
+            'active_projects_count': Project.objects.filter(
+                team__in=user_teams,
+                status='active'
+            ).distinct().count(),
+            'pending_tasks_count': user_tasks.filter(
+                status__in=['todo', 'inprogress']
+            ).count(),
+            'completion_rate': calculate_completion_rate(request.user)
         }
-    return {}    
+    return {}   
 
-@login_required
-@handle_view_errors
-def notification_list(request):
-    """View to display all notifications for the current user"""
-    notifications = (Notification.objects.filter(user=request.user)
-                    .select_related('user')
-                    .order_by('-created_at'))
-    
-    paginator = Paginator(notifications, 10)  # Show 10 notifications per page
-    page = request.GET.get('page')
-    notifications = paginator.get_page(page)
-    
-    return render(request, 'projects/notifications.html', {
-        'notifications': notifications,
-        'unread_count': notifications.filter(read=False).count()
-    })
-
-# In views.py, add these new views
 
 @login_required
 @handle_view_errors
@@ -878,21 +976,29 @@ def upload_file(request, project_id):
         messages.error(request, MSG_PERMISSION_DENIED)
         return redirect('project_list')
     
-    if request.method == 'POST':
-        form = FileForm(request.POST, request.FILES)
-        if form.is_valid():
-            file = form.save(commit=False)
-            file.uploaded_by = request.user
-            file.save()
-            messages.success(request, 'File uploaded successfully!')
-            return redirect('project_files', project_id=project_id)
-    else:
-        form = FileForm()
-    
-    return render(request, 'projects/upload_file.html', {
-        'form': form,
-        'project': project
-    })
+    try:
+        if request.method == 'POST':
+            form = FileForm(request.POST, request.FILES)
+            if form.is_valid():
+                file = form.save(commit=False)
+                file.uploaded_by = request.user
+                file.save()
+                messages.success(request, 'File uploaded successfully!')
+                return redirect('project_files', project_id=project_id)
+            else:
+                for error in form.errors.values():
+                    messages.error(request, error)
+        else:
+            form = FileForm()
+        
+        return render(request, 'projects/upload_file.html', {
+            'form': form,
+            'project': project
+        })
+    except Exception as e:
+        logger.error(f"File upload error: {str(e)}")
+        messages.error(request, MSG_FILE_UPLOAD_ERROR)
+        return redirect('project_files', project_id=project_id)
 
 @login_required
 @handle_view_errors
@@ -908,3 +1014,60 @@ def delete_file(request, file_id):
     file.delete()
     messages.success(request, 'File deleted successfully!')
     return redirect('project_files', project_id=project_id)    
+
+@login_required
+@handle_view_errors
+@transaction_handler
+def update_avatar(request):
+    """Update user profile avatar"""
+    if request.method == 'POST':
+        try:
+            profile = request.user.profile
+            profile.profile_picture = request.FILES['profile_picture']
+            profile.save()
+            return JsonResponse({
+                'status': 'success',
+                'avatar_url': profile.profile_picture.url
+            })
+        except Exception as e:
+            logger.error(f"Avatar update error: {str(e)}")
+            return JsonResponse({
+                'status': 'error', 
+                'message': MSG_AVATAR_UPDATE_ERROR
+            })
+    return JsonResponse({'status': 'error', 'message': MSG_INVALID_REQUEST})
+
+@login_required
+def notification_list(request):
+    """Display all notifications or return JSON for AJAX requests"""
+    notifications_queryset = (
+        Notification.objects.filter(user=request.user)
+        .select_related('user')
+        .order_by('-created_at')
+    )
+    
+    unread_count = notifications_queryset.filter(read=False).count()
+    
+    # Handle AJAX requests for JSON data
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({
+            'notifications': [
+                {
+                    'id': n.id,
+                    'message': n.message,
+                    'created_at': n.created_at.isoformat(),
+                    'read': n.read
+                } for n in notifications_queryset[:5]  # Return latest 5
+            ],
+            'unread_count': unread_count
+        })
+
+    # Handle regular page request
+    paginator = Paginator(notifications_queryset, 10)
+    page = request.GET.get('page')
+    notifications = paginator.get_page(page)
+    
+    return render(request, 'projects/notifications.html', {
+        'notifications': notifications,
+        'unread_count': unread_count
+    })          

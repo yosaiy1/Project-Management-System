@@ -1,421 +1,253 @@
-/* Modern Color Palette */
+/* Root Variables */
 :root {
-    --primary: #4f46e5;
-    --primary-light: #818cf8;
-    --secondary: #6366f1;
-    --accent: #c084fc;
-    --success: #34d399;
-    --warning: #fbbf24;
-    --danger: #ef4444;
-    --background: #f8fafc;
-    --card-bg: #ffffff;
-    --text-primary: #1e293b;
-    --text-secondary: #64748b;
-    --border-light: #e2e8f0;
-    --gradient-1: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
-    --gradient-2: linear-gradient(135deg, #c084fc 0%, #818cf8 100%);
+    --gradient-1: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    --card-hover-transform: translateY(-5px);
+    --kanban-min-height: 400px;
 }
 
-/* Base Styles */
-body, html {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 50%, #f0f7ff 100%);
-    color: var(--text-primary);
-    line-height: 1.7;
+/* Welcome Section */
+.welcome-section {
+    padding: 3rem;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius);
+    text-align: center;
+    margin-bottom: 2rem;
 }
 
-.container {
-    margin-top: 3rem;
-    padding: 0 2rem;
-    max-width: 1400px;
-}
-
-/* Advanced Header Styles */
-h2 {
+.gradient-text {
     background: var(--gradient-1);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
-    font-size: 3rem;
-    font-weight: 800;
-    margin-bottom: 1.5rem;
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+/* Stats Cards */
+.stat-card {
+    padding: 1.5rem;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius);
     text-align: center;
-    letter-spacing: -0.02em;
-    position: relative;
+    transition: transform var(--transition-normal);
 }
 
-h2::after {
-    content: '';
-    position: absolute;
-    bottom: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 150px;
-    height: 4px;
-    background: var(--gradient-2);
-    border-radius: 2px;
+.stat-card:hover {
+    transform: var(--card-hover-transform);
+    box-shadow: var(--shadow-lg);
 }
 
-h3 {
-    color: var(--primary);
+.stat-value {
     font-size: 2rem;
     font-weight: 700;
-    margin: 2.5rem 0 1.5rem;
-    position: relative;
-    display: inline-block;
-}
-
-h3::after {
-    content: '';
-    position: absolute;
-    bottom: -8px;
-    left: 0;
-    width: 100%;
-    height: 4px;
-    background: var(--gradient-1);
-    border-radius: 2px;
-    transform: scaleX(0.3);
-    transform-origin: left;
-    transition: transform 0.3s ease;
-}
-
-h3:hover::after {
-    transform: scaleX(1);
-}
-
-/* Enhanced Card Styles */
-.card {
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 1.5rem;
-    box-shadow: 0 10px 30px rgba(99, 102, 241, 0.1);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    overflow: hidden;
-    position: relative;
-}
-
-.card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(192, 132, 252, 0.1) 100%);
-    opacity: 0;
-    transition: opacity 0.4s ease;
-}
-
-.card:hover {
-    transform: translateY(-10px) scale(1.02);
-    box-shadow: 0 25px 50px rgba(99, 102, 241, 0.15);
-}
-
-.card:hover::before {
-    opacity: 1;
-}
-
-.card-body {
-    padding: 2.5rem;
-    position: relative;
-}
-
-.card-title {
-    background: var(--gradient-1);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin-bottom: 1.25rem;
-    line-height: 1.4;
-}
-
-.card-text {
-    color: var(--text-secondary);
-    line-height: 1.8;
-    font-size: 1.1rem;
-}
-
-.card-footer {
-    background: linear-gradient(to right, rgba(248, 250, 252, 0.8), rgba(255, 255, 255, 0.8));
-    border-top: 1px solid rgba(0, 0, 131, 0.1);
-    padding: 1.5rem 2.5rem;
-    backdrop-filter: blur(10px);
-    z-index: 1;
-
-}
-
-/* Premium Button Styles */
-.btn {
-    padding: 1rem 2rem;
-    font-weight: 600;
-    border-radius: 1.25rem;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    font-size: 0.9rem;
-}
-
-.btn-primary {
-    background: var(--gradient-1);
-    border: none;
-    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
-    position: relative;
-    overflow: hidden;
-}
-
-.btn-primary::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 200%;
-    height: 100%;
-    background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
-    transform: translateX(-100%);
-    transition: transform 0.6s ease;
-}
-
-.btn-primary:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 25px rgba(99, 102, 241, 0.4);
-}
-
-.btn-primary:hover::after {
-    transform: translateX(100%);
-}
-
-.btn-outline-primary {
-    background: rgba(255, 255, 255, 0.8);
-    border: 2px solid var(--primary);
     color: var(--primary);
-    position: relative;
-    overflow: hidden;
-    z-index: 1;
+    margin: 1rem 0;
 }
 
-.btn-outline-primary::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: var(--gradient-1);
-    z-index: -1;
-    transform: scaleX(0);
-    transform-origin: right;
-    transition: transform 0.4s ease;
+.stat-label {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
 }
 
-.btn-outline-primary:hover {
-    color: white;
-    border-color: transparent;
-}
-
-.btn-outline-primary:hover::before {
-    transform: scaleX(1);
-    transform-origin: left;
-}
-
-/* Advanced Kanban Board */
-.list-group {
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(15px);
-    border-radius: 1.5rem;
-    padding: 2rem;
-    min-height: 450px;
-    border: 1px solid rgba(99, 102, 241, 0.15);
-    box-shadow: 0 15px 35px rgba(99, 102, 241, 0.1);
-}
-
-.list-group-item {
-    background: white;
-    border: 1px solid var(--border-light);
-    border-radius: 1.25rem;
+/* Project Cards */
+.project-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius);
     padding: 1.5rem;
-    margin-bottom: 1.25rem;
-    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.08);
-    cursor: grab;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.list-group-item::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
     height: 100%;
-    width: 4px;
-    background: var(--gradient-1);
-    transform: scaleY(0);
-    transition: transform 0.3s ease;
+    transition: all var(--transition-normal);
 }
 
-.list-group-item:hover {
-    transform: translateX(8px);
-    box-shadow: 0 12px 25px rgba(99, 102, 241, 0.12);
+.project-card:hover {
+    transform: var(--card-hover-transform);
+    box-shadow: var(--shadow-lg);
 }
 
-.list-group-item:hover::before {
-    transform: scaleY(1);
-}
-
-/* Enhanced Status Indicators */
-.status-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.5rem 1rem;
-    border-radius: 2rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin-bottom: 1.25rem;
-    transition: all 0.3s ease;
-}
-
-.status-badge::before {
-    content: '';
-    display: inline-block;
-    width: 8px;
+.project-card .progress {
     height: 8px;
-    border-radius: 50%;
-    margin-right: 8px;
+    background-color: var(--bg-secondary);
 }
 
-.status-todo {
-    background: rgba(37, 99, 235, 0.1);
-    color: #2563eb;
+.project-card .progress-bar {
+    background: var(--gradient-1);
 }
 
-.status-todo::before {
-    background: #2563eb;
+/* Kanban Board */
+.kanban-column {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    height: 100%;
 }
 
-.status-progress {
-    background: rgba(217, 119, 6, 0.1);
-    color: #d97706;
+.column-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
-.status-progress::before {
-    background: #d97706;
+.task-list {
+    min-height: var(--kanban-min-height);
+    padding: 0.5rem;
 }
 
-.status-done {
-    background: rgba(22, 163, 74, 0.1);
-    color: #16a34a;
+.task-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: calc(var(--border-radius) - 4px);
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    cursor: grab;
+    transition: all var(--transition-normal);
 }
 
-.status-done::before {
-    background: #16a34a;
-}
-
-/* Smooth Animations */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateX(-30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-.card {
-    animation: fadeInUp 0.8s ease-out forwards;
-}
-
-.list-group {
-    animation: slideIn 0.8s ease-out forwards;
-}
-
-/* Premium Scrollbar */
-::-webkit-scrollbar {
-    width: 10px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--background);
-    border-radius: 5px;
-}
-
-::-webkit-scrollbar-thumb {
-    background: linear-gradient(var(--primary-light), var(--accent));
-    border-radius: 5px;
-    border: 2px solid var(--background);
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(var(--primary), var(--secondary));
+.task-card:hover {
+    transform: translateX(5px);
+    border-color: var(--primary);
+    box-shadow: var(--shadow-sm);
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .container {
-        padding: 0 1.5rem;
+    .welcome-section {
+        padding: 2rem 1rem;
     }
+    
+    .gradient-text {
+        font-size: 2rem;
+    }
+    
+    .stat-card {
+        margin-bottom: 1rem;
+    }
+    
+    .kanban-column {
+        margin-bottom: 1rem;
+    }
+    
+    .task-list {
+        min-height: 200px;
+    }
+}
 
-    h2 {
-        font-size: 2.25rem;
+@media (max-width: 576px) {
+    .gradient-text {
+        font-size: 1.75rem;
     }
+    
+    .stat-value {
+        font-size: 1.5rem;
+    }
+    
+    .project-card {
+        padding: 1rem;
+    }
+}
 
-    .card-body {
-        padding: 2rem;
-    }
+/* Project Card Details */
+.project-card .card-title {
+    font-size: 1.25rem;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
 
-    .btn {
-        padding: 0.875rem 1.75rem;
-    }
+.project-card .card-text {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+}
 
-    .list-group {
-        min-height: 350px;
-        padding: 1.5rem;
-    }
+/* Status Badges */
+.badge {
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 600;
+    border-radius: 9999px;
+}
+
+.badge.bg-pending { background-color: var(--warning); }
+.badge.bg-completed { background-color: var(--success); }
+.badge.bg-active { background-color: var(--primary); }
+
+/* Task Card Enhancements */
+.task-card .task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+}
+
+.task-card .task-title {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.task-card .task-meta {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* Drag & Drop States */
+.task-card.is-dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+
+.task-list.drag-over {
+    background: var(--primary-light);
+    border-radius: var(--border-radius);
 }
 
 /* Loading States */
-.loading {
-    position: relative;
-    overflow: hidden;
-}
-
-.loading::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 200%;
-    height: 100%;
+.loading-skeleton {
     background: linear-gradient(
         90deg,
-        transparent 0%,
-        rgba(255, 255, 255, 0.4) 50%,
-        transparent 100%
+        var(--bg-secondary) 25%,
+        var(--border-color) 37%,
+        var(--bg-secondary) 63%
     );
-    animation: shimmer 1.5s infinite;
+    background-size: 400% 100%;
+    animation: skeleton-loading 1.4s ease infinite;
 }
 
-@keyframes shimmer {
-    0% {
-        transform: translateX(-100%);
+@keyframes skeleton-loading {
+    0% { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+}
+
+/* Additional Animations */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Print Styles */
+@media print {
+    .task-card {
+        break-inside: avoid;
     }
-    100% {
-        transform: translateX(100%);
+    
+    .kanban-column {
+        break-inside: avoid;
+        page-break-inside: avoid;
     }
 }

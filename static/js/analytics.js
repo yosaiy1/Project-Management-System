@@ -4,6 +4,12 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeCharts() {
+    // Check if data exists first
+    if (!window.analyticsData) {
+        console.error('Analytics data not loaded');
+        return;
+    }
+
     // Chart Configuration
     const chartOptions = {
         responsive: true,

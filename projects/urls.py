@@ -44,6 +44,7 @@ urlpatterns = [
     path('profile/', views.view_profile, name='view_profile'),
     path('profile/update/', views.update_profile, name='update_profile'),
     path('profile/delete/', views.delete_account, name='delete_account'),
+    path('profile/update-avatar/', views.update_avatar, name='update_avatar'),
     
     # Authentication URLs (password reset, etc.)
     path('password_reset/', auth_views.PasswordResetView.as_view(), name='password_reset'),
@@ -60,7 +61,9 @@ urlpatterns = [
     path('progress/members/', views.member_progress, name='member_progress'),
     path('analytics/', views.analytics_view, name='analytics'),
     path('reports/', views.reports_view, name='reports'),
+
     
+        
     # Settings URLs
     path('settings/', views.settings_view, name='settings'),
     path('settings/password/', views.change_password, name='change_password'),

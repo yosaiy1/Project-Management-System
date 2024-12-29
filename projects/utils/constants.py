@@ -30,6 +30,9 @@ MSG_ERROR = "An error occurred."
 MSG_LOGIN_SUCCESS = "Login successful!"
 MSG_LOGOUT_SUCCESS = "You have been logged out successfully."
 MSG_PASSWORD_CHANGE_SUCCESS = "Your password was successfully updated!"
+MSG_INVALID_FILE = "Invalid file type or size"
+MSG_FILE_UPLOAD_ERROR = "Error uploading file"
+MSG_AVATAR_UPDATE_ERROR = "Error updating profile picture"
 
 # Project statuses
 PROJECT_STATUS_ACTIVE = 'active'

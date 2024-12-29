@@ -18,6 +18,7 @@ from django.utils.translation import gettext_lazy as _
 from django.core.paginator import Paginator
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.cache import cache_page
 from datetime import datetime
 # Python imports
 import json
@@ -207,31 +208,29 @@ def project_create(request):
     return render(request, 'projects/project_form.html', {'form': form})
 
 @login_required
+@handle_view_errors
 def project_create_view(request):
     if request.method == 'POST':
         form = ProjectForm(request.POST)
         if form.is_valid():
-            project = form.save(commit=False)
-            project.manager = request.user
-            project.save()
-            
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            try:
+                project = form.save(commit=False)
+                project.manager = request.user
+                project.save()
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Project created successfully',
+                        'redirect_url': reverse('project_detail', kwargs={'pk': project.pk})
+                    })
+                return redirect('project_detail', pk=project.pk)
+            except Exception as e:
                 return JsonResponse({
-                    'success': True,
-                    'message': 'Project created successfully',
-                    'redirect_url': reverse('project_detail', kwargs={'pk': project.pk})
-                })
-            return redirect('project_detail', pk=project.pk)
-        
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': False,
-                'message': 'Please correct the errors below',
-                'errors': {field: errors for field, errors in form.errors.items()}
-            }, status=400)
-    else:
-        form = ProjectForm()
-    
+                    'success': False,
+                    'message': str(e),
+                    'errors': form.errors
+                }, status=400)
     return render(request, 'projects/project_form.html', {'form': form})
 
 @login_required
@@ -392,6 +391,7 @@ def analytics_data(request):
 
 @login_required
 @handle_view_errors
+@cache_page(60 * 15)  # Cache for 15 minutes
 def analytics_view(request):
     """View for analytics dashboard"""
     try:
@@ -412,10 +412,32 @@ def analytics_view(request):
             'team_performance': json.dumps(team_perf, cls=DjangoJSONEncoder),
             'trend_labels': json.dumps(timeline_data, cls=DjangoJSONEncoder),
             'completion_trend': json.dumps(completion_trend, cls=DjangoJSONEncoder),
-            'total_projects': Project.objects.count(),
-            'active_tasks': Task.objects.exclude(status='done').count(),
-            'team_members': User.objects.filter(is_active=True).count(),
-            'completion_rate': calculate_completion_rate(request.user)
+            'stats': [
+                {
+                    'title': 'Total Projects',
+                    'value': Project.objects.count(),
+                    'icon': 'folder-fill',
+                    'color': 'primary'
+                },
+                {
+                    'title': 'Active Tasks',
+                    'value': Task.objects.exclude(status='done').count(),
+                    'icon': 'list-check',
+                    'color': 'success'
+                },
+                {
+                    'title': 'Team Members',
+                    'value': User.objects.filter(is_active=True).count(),
+                    'icon': 'people-fill',
+                    'color': 'info'
+                },
+                {
+                    'title': 'Completion Rate',
+                    'value': f"{calculate_completion_rate(request.user)}%",
+                    'icon': 'graph-up',
+                    'color': 'warning'
+                }
+            ]
         }
         return render(request, 'projects/analytics.html', context)
         

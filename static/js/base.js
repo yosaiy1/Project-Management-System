@@ -1230,12 +1230,32 @@ taskSystem.revertTaskPosition = function(evt) {
     list.insertBefore(evt.item, referenceNode);
 };
 
+// Loading System
+const loadingSystem = {
+    selectors: {
+        loader: '#pageLoader'
+    },
+
+    init() {
+        this.loader = document.querySelector(this.selectors.loader);
+    },
+
+    show() {
+        this.loader?.classList.remove('d-none');
+    },
+
+    hide() {
+        this.loader?.classList.add('d-none');
+    }
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize core utilities
     window.projectHub = { utils };
 
     try {
         // Core systems
+        loadingSystem.init();
         themeSystem.init();
         sidebarSystem.init();
         notificationSystem.init();
@@ -1277,7 +1297,8 @@ document.addEventListener('DOMContentLoaded', function() {
             keyboardShortcuts,
             taskSystem,
             modalSystem,
-            formSystem
+            formSystem,
+            loadingSystem
         });
 
     } catch (error) {

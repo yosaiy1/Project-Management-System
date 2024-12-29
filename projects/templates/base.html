@@ -20,6 +20,16 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body class="d-flex flex-column min-vh-100" data-bs-theme="light">
+    
+    <div id="pageLoader" class="position-fixed top-0 start-0 w-100 h-100 d-none">
+        <div class="w-100 h-100 bg-dark opacity-25"></div>
+        <div class="position-absolute top-50 start-50 translate-middle">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+
     <div class="toast-container position-fixed top-0 end-0 p-3"></div>
     <!-- Overlay for mobile sidebar -->
     <div class="sidebar-overlay" aria-hidden="true"></div>
@@ -179,7 +189,10 @@
                                 <div class="dropdown-divider"></div>
                                 <form method="post" action="{% url 'logout' %}">
                                     {% csrf_token %}
-                                    <button type="submit" class="dropdown-item rounded-3 p-2 hover-translate text-danger">
+                                    <button type="button" 
+                                            class="dropdown-item rounded-3 p-2 hover-translate text-danger"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#logoutModal">
                                         <i class="bi bi-box-arrow-right me-2"></i>Logout
                                     </button>
                                 </form>
@@ -398,6 +411,34 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js" defer></script>
     <script src="{% static 'js/base.js' %}" defer></script>
     {% block extra_js %}{% endblock %}
+
+    <!-- Logout Confirmation Modal -->
+    <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card border-0">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title" id="logoutModalLabel">
+                        <i class="bi bi-box-arrow-right text-danger me-2"></i>Confirm Logout
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="mb-0">Are you sure you want to logout?</p>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-secondary hover-translate" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-2"></i>Cancel
+                    </button>
+                    <form method="post" action="{% url 'logout' %}" class="d-inline" data-ajax>
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger hover-translate">
+                            <i class="bi bi-box-arrow-right me-2"></i>Logout
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
-</div>
 </html>

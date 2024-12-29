@@ -167,3 +167,10 @@ if DEBUG:
 # Password reset settings
 PASSWORD_RESET_TIMEOUT = 259200  # 3 days in seconds
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER    
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}

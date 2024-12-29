@@ -8,6 +8,7 @@ from django.core.exceptions import ValidationError
 class ProjectForm(forms.ModelForm):
     class Meta:
         model = Project
+        exclude = ['manager']
         fields = ['name', 'description', 'start_date', 'end_date', 'team']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -150,8 +151,67 @@ class TeamMemberForm(forms.ModelForm):
 class FileForm(forms.ModelForm):
     class Meta:
         model = File
-        fields = ['file_name', 'file']
+        fields = ['task', 'file_name', 'file']
         widgets = {
+            'task': forms.Select(attrs={'class': 'form-select'}),
             'file_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'file': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'file': forms.FileInput(attrs={'class': 'form-control'})
         }
+
+class ReportForm(forms.Form):
+    """Form for generating reports"""
+    REPORT_TYPES = (
+        ('tasks', 'Tasks Report'),
+        ('projects', 'Projects Report'),
+        ('team', 'Team Performance Report'),
+    )
+    
+    start_date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date'}),
+        help_text="Start date for report period"
+    )
+    end_date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date'}),
+        help_text="End date for report period"
+    )
+    report_type = forms.ChoiceField(
+        choices=REPORT_TYPES,
+        help_text="Type of report to generate"
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+
+        if start_date and end_date and start_date > end_date:
+            raise forms.ValidationError("End date must be after start date")
+        
+        return cleaned_data
+
+class ProjectSearchForm(forms.Form):
+    """Form for searching projects"""
+    query = forms.CharField(
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Search projects...'
+        })
+    )
+    status = forms.ChoiceField(
+        choices=[('', 'All')] + Project.STATUS_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+class TeamSearchForm(forms.Form):
+    """Form for searching teams"""
+    query = forms.CharField(
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Search teams...'
+        })
+    )        

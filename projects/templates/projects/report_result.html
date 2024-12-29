@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Report Results{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/report_result.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>Report Results</h2>
+                <div>
+                    <button class="btn btn-outline-primary me-2" onclick="window.print()">
+                        <i class="bi bi-printer"></i> Print Report
+                    </button>
+                    <a href="{% url 'reports' %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Content -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            {% if report_data.report_type == 'tasks' %}
+                <h3>Tasks Report</h3>
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <h4>Total Tasks</h4>
+                            <p class="h2">{{ report_data.total_tasks }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <h4>Completed Tasks</h4>
+                            <p class="h2">{{ report_data.completed_tasks }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <h4>Pending Tasks</h4>
+                            <p class="h2">{{ report_data.pending_tasks }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Task</th>
+                                <th>Project</th>
+                                <th>Status</th>
+                                <th>Due Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for task in report_data.tasks %}
+                            <tr>
+                                <td>{{ task.title }}</td>
+                                <td>{{ task.project.name }}</td>
+                                <td><span class="badge bg-{{ task.status|task_status_color }}">{{ task.get_status_display }}</span></td>
+                                <td>{{ task.due_date|date:"M d, Y" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            {% elif report_data.report_type == 'projects' %}
+                <h3>Projects Report</h3>
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <h4>Total Projects</h4>
+                            <p class="h2">{{ report_data.total_projects }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <h4>Active Projects</h4>
+                            <p class="h2">{{ report_data.active_projects }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <h4>Completed Projects</h4>
+                            <p class="h2">{{ report_data.completed_projects }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Project</th>
+                                <th>Team</th>
+                                <th>Status</th>
+                                <th>Progress</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for project in report_data.projects %}
+                            <tr>
+                                <td>{{ project.name }}</td>
+                                <td>{{ project.team.name }}</td>
+                                <td>{{ project.get_status_display }}</td>
+                                <td>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-{{ project.progress|progress_color }}" 
+                                             role="progressbar" 
+                                             style="width: {{ project.progress }}%" 
+                                             aria-valuenow="{{ project.progress }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100">
+                                            {{ project.progress }}%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            {% else %}
+                <h3>Team Performance Report</h3>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Team</th>
+                                <th>Total Tasks</th>
+                                <th>Completed Tasks</th>
+                                <th>Completion Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for team_data in report_data.teams %}
+                            <tr>
+                                <td>{{ team_data.team.name }}</td>
+                                <td>{{ team_data.total_tasks }}</td>
+                                <td>{{ team_data.completed_tasks }}</td>
+                                <td>{{ team_data.completion_rate }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

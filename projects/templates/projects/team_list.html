@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Teams{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/team_list.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>Teams</h2>
+                <a href="{% url 'team_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-lg"></i> Create Team
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if messages %}
+    <div class="messages mb-4">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for team in teams %}
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">{{ team.name }}</h5>
+                    <p class="card-text text-muted">{{ team.description|truncatewords:20 }}</p>
+                    <div class="d-flex align-items-center mb-3">
+                        <small class="text-muted me-3">
+                            <i class="bi bi-people"></i> {{ team.members.count }} members
+                        </small>
+                        <small class="text-muted">
+                            <i class="bi bi-folder"></i> {{ team.projects.count }} projects
+                        </small>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'team_detail' team.id %}" class="btn btn-outline-primary">View Details</a>
+                        {% if request.user == team.owner %}
+                        <a href="{% url 'manage_team_members' team.id %}" class="btn btn-outline-secondary">
+                            Manage Members
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center p-5">
+                <i class="bi bi-people display-1 text-muted mb-3"></i>
+                <h3>No Teams Found</h3>
+                <p class="text-muted">Create a team to start collaborating with others.</p>
+                <a href="{% url 'team_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-lg"></i> Create Team
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

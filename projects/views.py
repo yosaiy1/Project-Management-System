@@ -1,723 +1,910 @@
+# Django imports
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import login, authenticate, logout, update_session_auth_hash
-from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
-from .models import Team, Project, Task, Profile, Notification, ProjectReport, TeamMember, User
-from .forms import ProjectForm, TaskForm, CustomUserCreationForm, CustomLoginForm, ProfileForm, TeamMemberForm
-from django.utils import timezone
-from django.urls import reverse
 from django.db import transaction
-from datetime import timedelta, date
+from django.contrib.auth import update_session_auth_hash, login, authenticate, logout
+from django.contrib.auth.forms import PasswordChangeForm, AuthenticationForm
+from django.core.exceptions import PermissionDenied
+from django.db.models import Q
+from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
+from django.core.paginator import Paginator
+from django.urls import reverse
+from django.utils import timezone
+from datetime import datetime
+# Python imports
 import json
 import logging
 
+# Local imports
+from .models import Team, Project, Task, Profile, Notification, TeamMember
+from .forms import (
+    ProfileForm, TeamMemberForm, ReportForm,
+    ProjectSearchForm, TeamSearchForm, ProjectForm, 
+    TaskForm, CustomUserCreationForm
+)
+
+# Utils imports
+from .utils.analytics import (
+    calculate_completion_rate,
+    get_task_distribution,
+    get_team_performance,
+    get_completion_trend,
+    get_timeline_labels
+)
+from .utils.team import get_user_team_members
+from .utils.tasks import get_user_tasks, get_recent_activity
+from .utils.projects import get_user_projects
+from .utils.reports import generate_report
+from .utils.notifications import send_notification
+from .utils.common import get_common_context  # Add this import
+from .utils.permissions import (
+    can_manage_project,
+    has_team_permission,
+    has_project_permission,
+    has_task_permission,
+    can_manage_team
+)
+from .utils.decorators import (
+    handle_view_errors,
+    transaction_handler,
+    team_permission_required
+)
+from .utils.constants import (
+    MSG_PERMISSION_DENIED,
+    MSG_SUCCESS,
+    MSG_ERROR,
+    TASK_STATUS_DONE,
+    TASK_STATUS_IN_PROGRESS,
+    NOTIFICATION_SUCCESS,
+    MSG_LOGIN_SUCCESS,
+    MSG_LOGOUT_SUCCESS,
+    MSG_INVALID_REQUEST
+)
+
+# Initialize logger
 logger = logging.getLogger(__name__)
 
-# Helper function to send notifications
-def send_notification(user, message):
-    Notification.objects.create(
-        user=user,
-        message=message,
-        read=False
-    )
-
-# Homepage View
+# Core Views
 @login_required
+@handle_view_errors
 def homepage(request):
     try:
-        team_member = TeamMember.objects.get(user=request.user)
-        teams = Team.objects.filter(members=team_member)
-    except TeamMember.DoesNotExist:
-        teams = Team.objects.none()
+        projects = get_user_projects(request.user)
+        tasks = get_user_tasks(request.user)
+        context = get_common_context(request.user)
+        context.update({
+            'projects': projects,
+            'tasks': tasks,
+            'recent_activity': get_recent_activity(request.user)
+        })
+        return render(request, 'projects/homepage.html', context)
+    except Exception as e:
+        logger.error(f"Homepage error: {str(e)}")
+        messages.error(request, MSG_ERROR)
+        return redirect('login')
 
+# Authentication Views
+@handle_view_errors
+def register(request):
+    if request.method == 'POST':
+        form = CustomUserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            messages.success(request, 'Registration successful!')
+            return redirect('homepage')
+        else:
+            for error in form.errors.values():
+                messages.error(request, error)
+    else:
+        form = CustomUserCreationForm()
+    return render(request, 'registration/register.html', {'form': form})
+
+@handle_view_errors
+def login_view(request):
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(username=username, password=password)
+            if user is not None:
+                if user.is_active:  # Add active check
+                    login(request, user)
+                    messages.success(request, MSG_LOGIN_SUCCESS)
+                    return redirect('homepage')
+            else:
+                messages.error(request, "Invalid username or password")
+    else:
+        form = AuthenticationForm()
+    return render(request, 'registration/login.html', {'form': form})
+
+@login_required
+def logout_view(request):
+    logout(request)
+    messages.success(request, MSG_LOGOUT_SUCCESS)
+    return redirect('login')
+
+# Project Views
+@login_required
+@handle_view_errors
+def project_list(request):
+    projects = get_user_projects(request.user)
+    paginator = Paginator(projects, 10)  # Show 10 projects per page
+    page = request.GET.get('page')
+    projects = paginator.get_page(page)
+    return render(request, 'projects/project_list.html', {'projects': projects})
+
+@login_required
+@handle_view_errors
+@transaction_handler
+def project_create(request):
+    if request.method == 'POST':
+        form = ProjectForm(request.POST)
+        if form.is_valid():
+            try:
+                project = form.save(commit=False)
+                project.created_by = request.user
+                project.manager = request.user
+                project.created_at = timezone.now()  # Ensure timezone-aware datetime
+                project.save()
+                messages.success(request, 'Project created successfully!')
+                return redirect('project_detail', project_id=project.id)
+            except Exception as e:
+                logger.error(f"Project creation error: {str(e)}")
+                messages.error(request, MSG_ERROR)
+                return redirect('project_list')  # Add error redirect
+        else:
+            for error in form.errors.values():
+                messages.error(request, error)
+    else:
+        form = ProjectForm()
+    return render(request, 'projects/project_form.html', {'form': form})
+
+@login_required
+@handle_view_errors
+def project_detail(request, project_id):
+    project = get_object_or_404(Project.objects.select_related('team', 'manager'), id=project_id)
+    if not has_project_permission(request.user, project):
+        messages.error(request, MSG_PERMISSION_DENIED)
+        return redirect('project_list')
+    
+    tasks = Task.objects.filter(project=project).select_related('assigned_to', 'project')
     context = {
-        'projects': Project.objects.filter(team__members__user=request.user).distinct(),
-        'todo_tasks': Task.objects.filter(assigned_to=request.user, status='todo'),
-        'inprogress_tasks': Task.objects.filter(assigned_to=request.user, status='inprogress'),
-        'done_tasks': Task.objects.filter(assigned_to=request.user, status='done'),
-        'team': teams.first() if teams.exists() else None,
-        'notifications': Notification.objects.filter(user=request.user).order_by('-created_at')[:5],
-        'unread_notifications_count': Notification.objects.filter(user=request.user, read=False).count(),
-        'teams': teams,
+        'project': project,
+        'tasks': tasks,
+        'can_manage': can_manage_project(request.user, project)
     }
-    return render(request, 'projects/homepage.html', context)
+    return render(request, 'projects/project_detail.html', context)
+
+# Task Views
+@login_required
+@handle_view_errors
+@transaction_handler
+def task_create(request, project_id=None):
+    project = None
+    try:
+        if project_id:
+            project = get_object_or_404(Project, id=project_id)
+            if not has_project_permission(request.user, project):
+                messages.error(request, MSG_PERMISSION_DENIED)
+                return redirect('project_list')
+
+        if request.method == 'POST':
+            form = TaskForm(request.POST)
+            if form.is_valid():
+                task = form.save(commit=False)
+                task.created_by = request.user
+                if project:
+                    task.project = project
+                task.save()
+                messages.success(request, 'Task created successfully!')
+                return redirect('task_detail', project_id=task.project.id, task_id=task.id)
+        else:
+            form = TaskForm(initial={'project': project} if project else None)
+        
+        return render(request, 'projects/task_form.html', {
+            'form': form,
+            'project': project
+        })
+    except Exception as e:
+        logger.error(f"Task creation error: {str(e)}")
+        messages.error(request, MSG_ERROR)
+        return redirect('project_list')
 
 @login_required
+@handle_view_errors
+def task_detail(request, project_id, task_id):
+    task = get_object_or_404(Task.objects.select_related('project', 'assigned_to'), 
+                            id=task_id, project_id=project_id)
+    if not has_task_permission(request.user, task):
+        messages.error(request, MSG_PERMISSION_DENIED)
+        return redirect('project_detail', project_id=project_id)
+    
+    return render(request, 'projects/task_detail.html', {'task': task})
+
+@login_required
+@handle_view_errors
+@transaction_handler
+def task_update(request, project_id, task_id):
+    task = get_object_or_404(Task, id=task_id, project_id=project_id)
+    if not has_task_permission(request.user, task):
+        messages.error(request, MSG_PERMISSION_DENIED)
+        return redirect('task_detail', project_id=project_id, task_id=task_id)
+
+    if request.method == 'POST':
+        form = TaskForm(request.POST, instance=task)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Task updated successfully!')
+            return redirect('task_detail', project_id=project_id, task_id=task_id)
+    else:
+        form = TaskForm(instance=task)
+    
+    return render(request, 'projects/task_form.html', {
+        'form': form,
+        'task': task,
+        'project': task.project
+    })
+
+# Team Views
+@login_required
+@handle_view_errors
+def team_list(request):
+    teams = Team.objects.filter(members__user=request.user).distinct()
+    return render(request, 'projects/team_list.html', {'teams': teams})
+
+@login_required
+@handle_view_errors
+@transaction_handler
+def team_create(request):
+    try:
+        if request.method == 'POST':
+            team = Team.objects.create(
+                name=request.POST.get('name'),
+                description=request.POST.get('description'),
+                owner=request.user
+            )
+            TeamMember.objects.create(team=team, user=request.user)
+            messages.success(request, 'Team created successfully!')
+            return redirect('team_detail', team_id=team.id)
+    except Exception as e:
+        logger.error(f"Team creation error: {str(e)}")
+        messages.error(request, MSG_ERROR)
+        return redirect('team_list')
+    return render(request, 'projects/team_form.html')
+
+@login_required
+@handle_view_errors
+@team_permission_required
+def team_detail(request, team_id):
+    team = get_object_or_404(Team, id=team_id)
+    context = {
+        'team': team,
+        'members': team.members.all(),
+        'projects': team.projects.all(),
+        'can_manage': can_manage_team(request.user, team)
+    }
+    return render(request, 'projects/team_detail.html', context)
+
+@login_required
+@handle_view_errors
+def analytics_view(request):
+    if not request.user.is_staff:
+        messages.error(request, MSG_PERMISSION_DENIED)
+        return redirect('homepage')
+        
+    context = {
+        'task_distribution': get_task_distribution(request.user),
+        'team_performance': get_team_performance(request.user),
+        'completion_trend': get_completion_trend(request.user),
+        'timeline_labels': get_timeline_labels(),
+        'total_projects': Project.objects.count(),
+        'total_tasks': Task.objects.count(),
+        'active_tasks': Task.objects.filter(status='inprogress').count(),
+        'team_members': TeamMember.objects.count(),  # Add this
+        'completion_rate': calculate_completion_rate(request.user)  # Add this
+    }
+    return render(request, 'projects/analytics.html', context)
+
+# API Views
+@login_required
+@handle_view_errors
+@transaction_handler
+def update_task_status(request, task_id):
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': MSG_INVALID_REQUEST})
+    
+    try:
+        task = get_object_or_404(Task, id=task_id)
+        if not has_task_permission(request.user, task):
+            return JsonResponse({'status': 'error', 'message': MSG_PERMISSION_DENIED})
+        
+        data = json.loads(request.body)
+        new_status = data.get('status')
+        if new_status:
+            task.status = new_status
+            if new_status == TASK_STATUS_DONE:
+                task.completed_at = timezone.now()
+            task.save()
+            return JsonResponse({'status': 'success'})
+    except Exception as e:
+        logger.error(f"Task status update error: {str(e)}")
+        return JsonResponse({'status': 'error', 'message': MSG_ERROR})
+
+# Profile Views
+@login_required
+@handle_view_errors
+def view_profile(request):
+    try:
+        # Get or create profile for user
+        profile, created = Profile.objects.get_or_create(user=request.user)
+        if created:
+            # Set default values if needed
+            profile.save()
+            messages.info(request, "Profile created successfully!")
+            
+        return render(request, 'profile/view_profile.html', {'profile': profile})  # Update path
+    except Exception as e:
+        logger.error(f"Profile view error: {str(e)}")
+        messages.error(request, "Error accessing profile")
+        return redirect('homepage')
+        
+@login_required
+@handle_view_errors
+@transaction_handler
+def update_profile(request):
+    if request.method == 'POST':
+        form = ProfileForm(request.POST, instance=request.user.profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Profile updated successfully!')
+            return redirect('view_profile')
+    else:
+        form = ProfileForm(instance=request.user.profile)
+    return render(request, 'profile/update_profile.html', {'form': form})  # Update path
+
+@login_required
+@handle_view_errors
+@transaction_handler
+def delete_account(request):
+    if request.method == 'POST':
+        request.user.delete()
+        messages.success(request, 'Your account has been deleted.')
+        return redirect('login')
+    return render(request, 'projects/delete_account.html')
+
+# Settings Views
+@login_required
+@handle_view_errors
 def settings_view(request):
-    return render(request, 'settings/settings.html')
+    return render(request, 'projects/settings.html')
 
 @login_required
+@handle_view_errors
 def change_password(request):
     if request.method == 'POST':
         form = PasswordChangeForm(request.user, request.POST)
         if form.is_valid():
             user = form.save()
-            update_session_auth_hash(request, user)  # Important!
-            messages.success(request, 'Your password was successfully updated!')
-            send_notification(request.user, "Your password was changed successfully.")
+            update_session_auth_hash(request, user)
+            messages.success(request, 'Password changed successfully!')
             return redirect('settings')
-        else:
-            messages.error(request, 'Please correct the error below.')
     else:
         form = PasswordChangeForm(request.user)
-    return render(request, 'settings/change_password.html', {
-        'form': form
-    })
+    return render(request, 'projects/change_password.html', {'form': form})
 
-# Project Create View
+# Progress & Reports Views
 @login_required
-def project_create(request):
-    if request.method == 'POST':
-        form = ProjectForm(request.POST)
-        if form.is_valid():
-            project = form.save(commit=False)
-            team = form.cleaned_data.get('team')
-            
-            if not (TeamMember.objects.filter(user=request.user, team=team).exists() or request.user == team.owner):
-                messages.error(request, "You don't have permission to create projects in this team.")
-                return redirect('homepage')
-            
-            project.save()
-            messages.success(request, 'Project created successfully!')
-            return redirect('project_detail', project_id=project.id)
-    else:
-        form = ProjectForm()
-    return render(request, 'projects/project_form.html', {'form': form})
-
-# View Projects of a Team
-@login_required
-def team_projects(request, team_id=None):
-    if team_id:
-        team = get_object_or_404(Team, id=team_id)
-        if not (TeamMember.objects.filter(user=request.user, team=team).exists() or request.user == team.owner):
-            messages.error(request, "You don't have permission to view this team's projects.")
-            return redirect('homepage')
-        projects = Project.objects.filter(team=team)
-    else:
-        projects = Project.objects.filter(team__members__user=request.user).distinct()
-    
-    return render(request, 'projects/team_projects.html', {'projects': projects})
-
-# Project Detail View
-@login_required
-def project_detail(request, project_id):
-    project = get_object_or_404(Project, id=project_id)
-    if not (TeamMember.objects.filter(user=request.user, team=project.team).exists() or request.user == project.team.owner):
-        messages.error(request, "You don't have permission to view this project.")
-        return redirect('homepage')
-    tasks = Task.objects.filter(project=project)
-    return render(request, 'projects/project_detail.html', {'project': project, 'tasks': tasks})
-
-# Task List View
-@login_required
-def task_list(request):
-    tasks = Task.objects.filter(
-        assigned_to=request.user
-    ).select_related('project').order_by('-created_at')
-    
-    return render(request, 'projects/task_list.html', {
-        'tasks': tasks,
-        'todo_tasks': tasks.filter(status='todo'),
-        'inprogress_tasks': tasks.filter(status='inprogress'),
-        'done_tasks': tasks.filter(status='done')
-    })
-
-# Task Detail View
-@login_required
-def task_detail(request, project_id, task_id):
-    project = get_object_or_404(Project, id=project_id)
-    task = get_object_or_404(Task, id=task_id, project=project)
-    if not (TeamMember.objects.filter(user=request.user, team=project.team).exists() or 
-            request.user == project.team.owner or 
-            request.user == task.assigned_to):
-        messages.error(request, "You don't have permission to view this task.")
-        return redirect('homepage')
-    return render(request, 'projects/task_detail.html', {'task': task, 'project': project})
-
-# Task Create View
-@login_required
-def task_create(request, project_id):
-    project = get_object_or_404(Project, id=project_id)
-    if not TeamMember.objects.filter(user=request.user, team=project.team).exists():
-        messages.error(request, "You don't have permission to create tasks in this project.")
-        return redirect('homepage')
-        
-    if request.method == 'POST':
-        form = TaskForm(request.POST)
-        if form.is_valid():
-            task = form.save(commit=False)
-            task.project = project
-            task.save()
-            send_notification(task.assigned_to, f"You have been assigned a new task: {task.title}")
-            messages.success(request, 'Task created successfully!')
-            return redirect('project_detail', project_id=project.id)
-    else:
-        form = TaskForm(initial={'project': project})
-
-    return render(request, 'projects/task_form.html', {'form': form, 'project': project})
-
-# Task Update View
-@login_required
-def task_update(request, project_id, task_id):
-    task = get_object_or_404(Task, id=task_id, project_id=project_id)
-    if not (request.user == task.assigned_to or 
-            TeamMember.objects.filter(user=request.user, team=task.project.team).exists()):
-        messages.error(request, "You don't have permission to update this task.")
-        return redirect('homepage')
-    if request.method == 'POST':
-        form = TaskForm(request.POST, instance=task)
-        if form.is_valid():
-            updated_task = form.save()
-            if updated_task.status == 'done':
-                send_notification(updated_task.assigned_to, f"Task '{updated_task.title}' is marked as done.")
-            messages.success(request, 'Task updated successfully!')
-            return redirect('task_detail', project_id=project_id, task_id=task_id)
-        else:
-            messages.error(request, 'There was an error with your task update.')
-    else:
-        form = TaskForm(instance=task)
-
-    return render(request, 'projects/task_form.html', {'form': form, 'task': task})
-
-# Task Delete View
-@login_required
-def task_delete(request, project_id, task_id):
-    task = get_object_or_404(Task, id=task_id, project_id=project_id)
-    if not (request.user == task.assigned_to or request.user == task.project.team.owner):
-        messages.error(request, "You don't have permission to delete this task.")
-        return redirect('homepage')
-    if request.method == "POST":
-        task.delete()
-        messages.success(request, 'Task deleted successfully!')
-        send_notification(request.user, f"Task '{task.title}' was deleted.")
-        return redirect('project_detail', project_id=project_id)
-    return render(request, 'projects/task_delete_confirm.html', {'task': task, 'project_id': project_id})
-
-# User Registration View
-def register(request):
-    if request.method == 'POST':
-        form = CustomUserCreationForm(request.POST)
-        if form.is_valid():
-            username = form.cleaned_data.get('username')
-            email = form.cleaned_data.get('email')
-            if User.objects.filter(username=username).exists():
-                messages.error(request, 'A user with this username already exists.')
-            elif User.objects.filter(email=email).exists():
-                messages.error(request, 'A user with this email already exists.')
-            else:
-                user = form.save()
-                login(request, user)
-                messages.success(request, 'Registration successful! You are now logged in.')
-                return redirect('homepage')
-        else:
-            messages.error(request, 'There was an error with your registration.')
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f"{field}: {error}")
-    else:
-        form = CustomUserCreationForm()
-
-    return render(request, 'registration/register.html', {'form': form})
-
-# User Login View
-def login_view(request):
-    if request.method == 'POST':
-        form = AuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            username_or_email = form.cleaned_data.get('username')
-            password = form.cleaned_data.get('password')
-            user = authenticate(request, username=username_or_email, password=password)
-            if user is None:
-                user = authenticate(request, email=username_or_email, password=password)
-            if user is not None:
-                login(request, user)
-                messages.success(request, 'Login successful!')
-                return redirect('homepage')
-            else:
-                messages.error(request, 'Invalid username or password.')
-        else:
-            messages.error(request, 'Invalid login details')
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f"{field}: {error}")
-    else:
-        form = AuthenticationForm()
-
-    return render(request, 'registration/login.html', {'form': form})
-
-# User Logout View
-@login_required
-def logout_view(request):
-    logout(request)
-    messages.success(request, 'You have been logged out successfully.')
-    return render(request, 'registration/logout_confirmation.html')
-
-# Profile Update View
-@login_required
-def update_profile(request):
-    profile, created = Profile.objects.get_or_create(user=request.user)
-    if request.method == 'POST':
-        form = ProfileForm(request.POST, request.FILES, instance=profile)
-        if form.is_valid():
-            updated_profile = form.save(commit=False)
-            updated_profile.save()
-            request.user.first_name = form.cleaned_data['first_name']
-            request.user.last_name = form.cleaned_data['last_name']
-            request.user.save()
-            messages.success(request, 'Profile updated successfully!')
-            send_notification(request.user, "Your profile has been updated.")
-            return redirect('view_profile')
-        else:
-            messages.error(request, 'There was an error with your profile update.')
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f"{field}: {error}")
-    else:
-        form = ProfileForm(instance=profile)
-
-    return render(request, 'profile/update_profile.html', {'form': form})
-
-# Profile Delete View
-@login_required
-def delete_account(request):
-    if request.method == 'POST':
-        request.user.delete()
-        messages.success(request, 'Account deleted successfully!')
-        send_notification(request.user, "Your account was deleted.")
-        return redirect('register')
-    return render(request, 'profile/delete_account.html')
-
-# Profile View
-@login_required
-def view_profile(request):
-    profile = get_object_or_404(Profile, user=request.user)
-    return render(request, 'profile/view_profile.html', {'profile': profile})
-
-@login_required
-def manage_team_members(request, team_id):
-    team = get_object_or_404(Team, id=team_id)
-
-    # Check if the user is the owner or has permission to manage the team members
-    if request.user != team.owner:
-        messages.error(request, "You don't have permission to manage this team's members.")
-        return redirect('team_detail', team_id=team.id)
-
-    if request.method == 'POST':
-        form = TeamMemberForm(request.POST)
-        if form.is_valid():
-            user = form.cleaned_data['user']
-            
-            # Check if the user is already a member of the team
-            if TeamMember.objects.filter(team=team, user=user).exists():
-                messages.error(request, f"{user.username} is already a member of this team.")
-            else:
-                # Add the new member
-                team_member = form.save(commit=False)
-                team_member.team = team
-                team_member.save()
-                messages.success(request, 'Team member added successfully!')
-                send_notification(request.user, f"New team member added to team '{team.name}'")
-                return redirect('manage_team_members', team_id=team.id)
-        else:
-            messages.error(request, 'There was an error with your submission.')
-    else:
-        form = TeamMemberForm(initial={'team': team})
-
-    members = TeamMember.objects.filter(team=team)  # List the current team members
-    return render(request, 'projects/manage_team_members.html', {
-        'form': form,
-        'team': team,
-        'members': members
-    })
-
-# Remove Team Member View
-@login_required
-def remove_team_member(request, team_id, member_id):
-    team = get_object_or_404(Team, id=team_id)
-    member = get_object_or_404(TeamMember, id=member_id, team=team)
-
-    # Ensure the logged-in user has permission to remove team members (e.g., only team owner can remove members)
-    if request.user != team.owner:
-        messages.error(request, "You don't have permission to remove this member.")
-        return redirect('team_members', team_id=team.id)
-
-    # Remove the team member
-    member.delete()
-    messages.success(request, f"Member {member.user.username} has been removed from the team.")
-    send_notification(request.user, f"Member {member.user.username} was removed from team '{team.name}'")
-    return redirect('team_members', team_id=team.id)
-
-# Project Report Generation
-@login_required
-def generate_report(request, project_id):
-    project = get_object_or_404(Project, id=project_id)
-    if not (TeamMember.objects.filter(user=request.user, team=project.team).exists() or request.user == project.team.owner):
-        messages.error(request, "You don't have permission to generate reports for this project.")
-        return redirect('homepage')
-    tasks = Task.objects.filter(project=project)
-    report_content = generate_report_content(project, tasks)
-    ProjectReport.objects.create(project=project, content=report_content)
-    messages.success(request, 'Report generated successfully!')
-    send_notification(request.user, f"Report for project '{project.name}' has been generated.")
-    return redirect('project_detail', project_id=project.id)
-
-def generate_report_content(project, tasks):
-    content = f"Report for project: {project.name}\n\n"
-    for task in tasks:
-        content += f"Task: {task.title}, Assigned to: {task.assigned_to.username}, Due date: {task.due_date}\n"
-    return content
-
-# Member Progress View
-@login_required
-def member_progress(request):
-    tasks = Task.objects.filter(assigned_to=request.user)
-    return render(request, 'projects/member_progress.html', {'tasks': tasks})
-
-# Send Notification Function
-def send_notification(user, message):
-    Notification.objects.create(user=user, message=message, read=False)
-
-# Clear all notifications - expects a POST request
-@csrf_protect  # Ensure CSRF protection in production
-def clear_all_notifications(request):
-    if request.method == 'POST':
-        try:
-            # Fetch notifications for the logged-in user and delete them
-            notifications = Notification.objects.filter(user=request.user)
-            notifications.delete()
-            
-            # Add a success message to be displayed to the user
-            messages.success(request, 'All notifications cleared.')
-            
-            # Redirect the user back to the homepage (or another relevant page)
-            return redirect('homepage')  # Adjust this to where you'd like to redirect
-        except Exception as e:
-            # Add an error message if something goes wrong
-            messages.error(request, f"Error clearing notifications: {str(e)}")
-            
-            # Redirect back to the homepage or relevant page
-            return redirect('homepage')  # Adjust as needed
-    else:
-        # Return an error response if the request method is not POST
-        return JsonResponse({'error': 'Invalid request method'}, status=400)
-
-# Update Task Status View
-@csrf_exempt
-@login_required
-def update_task_status(request, task_id):
-    if request.method != 'POST':
-        return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
-    try:
-        with transaction.atomic():
-            data = json.loads(request.body)
-            new_status = data.get('status')
-            task = Task.objects.select_for_update().get(id=task_id)
-            
-            if not (request.user == task.assigned_to or 
-                   TeamMember.objects.filter(user=request.user, team=task.project.team).exists()):
-                return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
-            
-            old_status = task.status
-            task.status = new_status
-            
-            if new_status == 'done' and old_status != 'done':
-                task.completed_at = timezone.now()
-            
-            task.save()
-            send_notification(task.assigned_to, f"Task '{task.title}' status updated to {new_status}")
-            return JsonResponse({'status': 'success'})
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-
-@login_required
-def team_list(request):
-    teams = Team.objects.filter(members__user=request.user).distinct()
-    return render(request, 'projects/team_list.html', {'teams': teams})
-
-def has_team_permission(user, team):
-    return TeamMember.objects.filter(user=user, team=team).exists() or user == team.owner
-
-@login_required 
-def team_detail(request, team_id):
-    team = get_object_or_404(Team, id=team_id)
-    if not has_team_permission(request.user, team):
-        messages.error(request, "You don't have permission to view this team.")
-        return redirect('homepage')
-    return render(request, 'projects/team_detail.html', {'team': team})
-
-@login_required
-def team_members(request, team_id):
-    team = get_object_or_404(Team, id=team_id)
-    members = TeamMember.objects.filter(team=team)
-
-    return render(request, 'projects/team_members.html', {
-        'team': team,
-        'members': members,
-        'no_members': not members.exists()  # Flag to show message if no members exist
-    })
-
-@login_required
+@handle_view_errors
 def progress(request):
-    user_projects = Project.objects.filter(
-        team__members__user=request.user
-    ).select_related('team').distinct()
-    
-    user_tasks = Task.objects.filter(
-        assigned_to=request.user
-    ).select_related('project')
-    
     context = {
-        'projects': user_projects,
-        'tasks': user_tasks,
         'completion_rate': calculate_completion_rate(request.user),
-        'recent_activity': Task.objects.filter(
-            assigned_to=request.user,
-            updated_at__gte=timezone.now() - timedelta(days=7)
-        ).select_related('project').order_by('-updated_at')
+        'recent_tasks': get_user_tasks(request.user)[:5],
+        'timeline_data': get_completion_trend(request.user)
     }
     return render(request, 'projects/progress.html', context)
 
-@login_required 
-def project_list(request):
-    projects = Project.objects.filter(
-        team__members__user=request.user
-    ).select_related('team').distinct().order_by('-date_created')
-
 @login_required
-def analytics_view(request):
+@handle_view_errors
+def member_progress(request):
     if not request.user.is_staff:
-        messages.error(request, "You don't have permission to view analytics.")
+        messages.error(request, MSG_PERMISSION_DENIED)
         return redirect('homepage')
-        
-    projects = Project.objects.filter(
-        team__members__user=request.user
-    ).select_related('team').distinct()
     
-    today = timezone.now().date()
-    thirty_days_ago = today - timedelta(days=30)
-    
+    team_members = get_user_team_members(request.user)
     context = {
-        'total_projects': projects.count(),
-        'active_tasks': Task.objects.filter(
-            assigned_to=request.user,
-            status__in=['todo', 'inprogress']
-        ).count(),
-        'team_members': TeamMember.objects.filter(
-            team__projects__in=projects
-        ).distinct().count(),
-        'completion_rate': calculate_completion_rate(request.user),
-        'timeline_labels': get_timeline_labels(),
-        'completed_tasks_data': get_completed_tasks_data(request.user),
-        'task_distribution': get_task_distribution(request.user),
-        'team_labels': get_team_labels(request.user),
-        'team_performance': get_team_performance(request.user),
-        'trend_labels': get_trend_labels(),
-        'completion_trend': get_completion_trend(request.user),
-        'recent_activities': Task.objects.filter(
-            assigned_to=request.user,
-            updated_at__date__gte=thirty_days_ago
-        ).order_by('-updated_at')[:10]
+        'members': team_members,
+        'performance_data': get_team_performance(request.user)
     }
-    return render(request, 'projects/analytics.html', context)
-
-def calculate_completion_rate(user):
-    total_tasks = Task.objects.filter(assigned_to=user).count()
-    completed_tasks = Task.objects.filter(assigned_to=user, status='done').count()
-    return round((completed_tasks / total_tasks * 100) if total_tasks > 0 else 0)
-
-def get_timeline_labels():
-    # Returns last 7 days
-    return [date.strftime('%b %d') for date in 
-            [(timezone.now() - timedelta(days=x)) for x in range(6, -1, -1)]]
-
-def get_completed_tasks_data(user):
-    # Returns completed tasks count for last 7 days
-    return [Task.objects.filter(
-        assigned_to=user,
-        status='done',
-        completed_at__date=timezone.now().date() - timedelta(days=x)
-    ).count() for x in range(6, -1, -1)]
-
-def get_task_distribution(user):
-    todo = Task.objects.filter(assigned_to=user, status='todo').count()
-    inprogress = Task.objects.filter(assigned_to=user, status='inprogress').count()
-    done = Task.objects.filter(assigned_to=user, status='done').count()
-    return [todo, inprogress, done]
-
-def get_team_labels(user):
-    teams = Team.objects.filter(members__user=user)
-    return [team.name for team in teams]
-
-def get_team_performance(user):
-    teams = Team.objects.filter(members__user=user)
-    return [Task.objects.filter(project__team=team, status='done').count() 
-            for team in teams]
-
-def get_trend_labels():
-    return ['Week 1', 'Week 2', 'Week 3', 'Week 4']
-
-def get_completion_trend(user):
-    weeks = []
-    for week in range(4):
-        start_date = timezone.now() - timedelta(weeks=week+1)
-        end_date = timezone.now() - timedelta(weeks=week)
-        completed = Task.objects.filter(
-            assigned_to=user,
-            status='done',
-            completed_at__range=[start_date, end_date]
-        ).count()
-        weeks.append(completed)
-    return weeks[::-1]
+    return render(request, 'projects/member_progress.html', context)
 
 @login_required
-@csrf_protect
-def mark_notification_as_read(request, notification_id):
-    if request.method == 'POST':
-        try:
-            notification = Notification.objects.get(id=notification_id, user=request.user)
-            notification.read = True
-            notification.save()
-            return JsonResponse({'status': 'success'})
-        except Notification.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Notification not found'}, status=404)
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
-
-@login_required
-def quick_create_task(request):
-    if request.method == 'POST':
-        with transaction.atomic():
-            form = TaskForm(request.POST)
+@handle_view_errors
+def reports_view(request):
+    try:
+        if request.method == 'POST':
+            form = ReportForm(request.POST)
             if form.is_valid():
-                task = form.save(commit=False)
-                if not TeamMember.objects.filter(
-                    user=request.user, 
-                    team=task.project.team
-                ).exists():
-                    messages.error(request, "You don't have permission to create tasks in this project.")
-                    return redirect('homepage')
-                task.save()
-                send_notification(task.assigned_to, f"You have been assigned a new task: {task.title}")
-                messages.success(request, 'Task created successfully!')
-                return redirect('task_detail', project_id=task.project.id, task_id=task.id)
-    else:
-        form = TaskForm()
-    return render(request, 'projects/task_form.html', {
-        'form': form, 
-        'is_quick_create': True
-    })
+                start_date = timezone.make_aware(
+                    datetime.combine(form.cleaned_data['start_date'], datetime.min.time())
+                )
+                end_date = timezone.make_aware(
+                    datetime.combine(form.cleaned_data['end_date'], datetime.max.time())
+                )
+                report_type = form.cleaned_data['report_type']
+                
+                report_data = generate_report(request.user, start_date, end_date, report_type)
+                if not report_data:
+                    messages.error(request, MSG_ERROR)
+                    return redirect('reports')
+                    
+                return render(request, 'projects/report_result.html', {
+                    'report_data': report_data,
+                    'form': form
+                })
+        else:
+            form = ReportForm()
+        return render(request, 'projects/reports.html', {'form': form})
+    except Exception as e:
+        logger.error(f"Report generation error: {str(e)}")
+        messages.error(request, MSG_ERROR)
+        return redirect('homepage')
+
+# Team Member Management Views
+@login_required
+@handle_view_errors
+@team_permission_required
+def manage_team_members(request, team_id):
+    team = get_object_or_404(Team, id=team_id)
+    if not can_manage_team(request.user, team):
+        messages.error(request, MSG_PERMISSION_DENIED)
+        return redirect('team_detail', team_id=team_id)
+
+    try:
+        if request.method == 'POST':
+            form = TeamMemberForm(request.POST)
+            if form.is_valid():
+                user = form.cleaned_data['user']
+                if not TeamMember.objects.filter(team=team, user=user).exists():
+                    TeamMember.objects.create(team=team, user=user)
+                    messages.success(request, f'{user.username} added to team.')
+                else:
+                    messages.warning(request, f'{user.username} is already in the team.')
+                return redirect('manage_team_members', team_id=team_id)
+        else:
+            form = TeamMemberForm()
+
+        members = team.members.select_related('user').all()
+        return render(request, 'projects/manage_team_members.html', {
+            'team': team,
+            'members': members,
+            'form': form
+        })
+    except Exception as e:
+        logger.error(f"Team member management error: {str(e)}")
+        messages.error(request, MSG_ERROR)
+        return redirect('team_detail', team_id=team_id)
 
 @login_required
+@handle_view_errors
+@team_permission_required
+def remove_team_member(request, team_id, member_id):
+    team = get_object_or_404(Team, id=team_id)
+    if not can_manage_team(request.user, team):
+        messages.error(request, MSG_PERMISSION_DENIED)
+        return redirect('team_detail', team_id=team_id)
+    
+    member = get_object_or_404(TeamMember, id=member_id, team=team)
+    if member.user == team.owner:
+        messages.error(request, "Cannot remove team owner.")
+    else:
+        member.delete()
+        messages.success(request, "Member removed successfully.")
+    return redirect('manage_team_members', team_id=team_id)
+
+# Search Views
+@login_required
+@handle_view_errors
 def search_view(request):
+    query = request.GET.get('q', '')
+    if query:
+        projects = Project.objects.filter(
+            Q(name__icontains=query) | 
+            Q(description__icontains=query),
+            team__members__user=request.user
+        ).distinct()
+        
+        tasks = Task.objects.filter(
+            Q(title__icontains=query) |
+            Q(description__icontains=query),
+            project__team__members__user=request.user
+        ).distinct()
+    else:
+        projects = Project.objects.none()
+        tasks = Task.objects.none()
+        
+    context = {
+        'query': query,
+        'projects': projects,
+        'tasks': tasks
+    }
+    return render(request, 'projects/search_results.html', context)
+
+@login_required
+@handle_view_errors
+def api_search(request):
     query = request.GET.get('q', '').strip()
     if len(query) < 2:
-        return JsonResponse({'results': [], 'message': 'Query too short'})
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Query too short'
+        })
     
     try:
         projects = Project.objects.filter(
-            team__members__user=request.user,
-            name__icontains=query
-        ).distinct()
+            Q(name__icontains=query) | 
+            Q(description__icontains=query),
+            team__members__user=request.user
+        ).distinct()[:5]
+        
         tasks = Task.objects.filter(
-            assigned_to=request.user,
-            title__icontains=query
-        )
+            Q(title__icontains=query) |
+            Q(description__icontains=query),
+            project__team__members__user=request.user
+        ).distinct()[:5]
         
         results = []
         for project in projects:
             results.append({
                 'type': 'project',
+                'id': project.id,
                 'title': project.name,
-                'description': project.description[:100] if project.description else '',
                 'url': reverse('project_detail', args=[project.id])
             })
+            
         for task in tasks:
             results.append({
                 'type': 'task',
+                'id': task.id,
                 'title': task.title,
-                'description': f'Task in {task.project.name}',
-                'status': task.status,
                 'url': reverse('task_detail', args=[task.project.id, task.id])
             })
+            
         return JsonResponse({
             'status': 'success',
-            'results': results,
-            'count': len(results)
+            'results': results
         })
     except Exception as e:
-        logger.error(f"Search error: {str(e)}")
+        logger.error(f"API search error: {str(e)}")
         return JsonResponse({
             'status': 'error',
-            'message': 'An error occurred while searching'
-        }, status=500)
+            'message': MSG_ERROR
+        })
 
-
-def base_context(request):
-    if request.user.is_authenticated:
-        try:
-            notifications = (Notification.objects.filter(user=request.user)
-                          .select_related('user')
-                          .order_by('-created_at'))
-            
-            return {
-                'projects_count': Project.objects.filter(
-                    team__members__user=request.user
-                ).distinct().count(),
-                'tasks_count': Task.objects.filter(
-                    assigned_to=request.user,
-                    status__in=['todo', 'inprogress']
-                ).count(),
-                'notifications': notifications[:5],
-                'unread_notifications_count': notifications.filter(read=False).count(),
-            }
-        except Exception as e:
-            logger.error(f"Base context error: {str(e)}", exc_info=True)
-            return {}
-    return {}
+# Notification Views
+@login_required
+@transaction_handler
+def clear_all_notifications(request):
+    try:
+        Notification.objects.filter(user=request.user).delete()
+        return JsonResponse({'status': 'success'})
+    except Exception as e:
+        logger.error(f"Clear notifications error: {str(e)}")
+        return JsonResponse({'status': 'error', 'message': MSG_ERROR})
 
 @login_required
+def mark_notification_as_read(request, notification_id):
+    try:
+        notification = get_object_or_404(Notification, id=notification_id, user=request.user)
+        notification.read = True
+        notification.save()
+        return JsonResponse({'status': 'success'})
+    except Exception as e:
+        logger.error(f"Mark notification error: {str(e)}")
+        return JsonResponse({'status': 'error', 'message': MSG_ERROR})
+
+@login_required
+@handle_view_errors
+def all_team_members(request):
+    """View to display all team members across teams"""
+    teams = Team.objects.filter(members__user=request.user).distinct()
+    context = {
+        'teams': teams,
+        'user_is_staff': request.user.is_staff
+    }
+    return render(request, 'projects/all_team_members.html', context)
+
+@login_required
+@handle_view_errors
+@transaction_handler
+def quick_create_task(request):
+    if request.method == 'POST':
+        form = TaskForm(request.POST)
+        if form.is_valid():
+            task = form.save(commit=False)
+            task.created_by = request.user
+            task.save()
+            messages.success(request, 'Task created successfully!')
+            return redirect('task_detail', project_id=task.project.id, task_id=task.id)
+    return redirect('homepage')
+
+@login_required
+@handle_view_errors
+@transaction_handler
 def project_update(request, project_id):
     project = get_object_or_404(Project, id=project_id)
-    if not has_team_permission(request.user, project.team):
-        messages.error(request, "You don't have permission to update this project.")
-        return redirect('homepage')
+    if not has_project_permission(request.user, project):
+        messages.error(request, MSG_PERMISSION_DENIED)
+        return redirect('project_list')
 
     if request.method == 'POST':
-        try:
-            with transaction.atomic():
-                form = ProjectForm(request.POST, instance=project)
-                if form.is_valid():
-                    updated_project = form.save()
-                    messages.success(request, 'Project updated successfully!')
-                    
-                    # Send notification to team members
-                    for member in project.team.members.all():
-                        send_notification(
-                            member.user,
-                            f"Project '{updated_project.name}' was updated."
-                        )
-                    
-                    return redirect('project_detail', project_id=project.id)
-                else:
-                    for field, errors in form.errors.items():
-                        for error in errors:
-                            messages.error(request, f"{field}: {error}")
-        except Exception as e:
-            logger.error(f"Project update error: {str(e)}")
-            messages.error(request, "An error occurred while updating the project.")
+        form = ProjectForm(request.POST, instance=project)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Project updated successfully!')
+            return redirect('project_detail', project_id=project.id)
     else:
         form = ProjectForm(instance=project)
-    
-    return render(request, 'projects/project_form.html', {
-        'form': form,
-        'project': project,
-        'is_update': True,
-        'title': 'Update Project'
+    return render(request, 'projects/project_form.html', {'form': form, 'project': project})
+
+@login_required
+@handle_view_errors
+@transaction_handler
+def project_delete(request, project_id):
+    project = get_object_or_404(Project, id=project_id)
+    if not has_project_permission(request.user, project):
+        messages.error(request, MSG_PERMISSION_DENIED)
+        return redirect('project_list')
+        
+    if request.method == 'POST':
+        project.delete()
+        messages.success(request, 'Project deleted successfully!')
+        return redirect('project_list')
+    return render(request, 'projects/project_confirm_delete.html', {'project': project})
+
+@login_required
+@handle_view_errors
+def team_projects(request, team_id):
+    team = get_object_or_404(Team, id=team_id)
+    if not has_team_permission(request.user, team):
+        messages.error(request, MSG_PERMISSION_DENIED)
+        return redirect('team_list')
+        
+    projects = Project.objects.filter(team=team)
+    return render(request, 'projects/team_projects.html', {
+        'team': team,
+        'projects': projects
     })
 
+@login_required
+@handle_view_errors
+@transaction_handler
+def task_delete(request, project_id, task_id):
+    task = get_object_or_404(Task, id=task_id, project_id=project_id)
+    if not has_task_permission(request.user, task):
+        messages.error(request, MSG_PERMISSION_DENIED)
+        return redirect('project_detail', project_id=project_id)
+        
+    if request.method == 'POST':
+        task.delete()
+        messages.success(request, 'Task deleted successfully!')
+        return redirect('project_detail', project_id=project_id)
+    return render(request, 'projects/task_confirm_delete.html', {'task': task})
 
+@login_required
+@handle_view_errors
+def team_members(request, team_id):
+    """View to display members of a specific team"""
+    team = get_object_or_404(Team, id=team_id)
+    if not has_team_permission(request.user, team):
+        messages.error(request, MSG_PERMISSION_DENIED)
+        return redirect('homepage')
+        
+    members = TeamMember.objects.filter(team=team).select_related('user')
+    return render(request, 'projects/team_members.html', {
+        'team': team,
+        'members': members,
+        'is_owner': team.owner == request.user
+    })
 
+@login_required
+@handle_view_errors
+def task_list(request):
+    """View to display all tasks for the current user"""
+    tasks = get_user_tasks(request.user)
+    paginator = Paginator(tasks, 10)
+    page = request.GET.get('page')
+    tasks = paginator.get_page(page)
+    return render(request, 'projects/task_list.html', {'tasks': tasks})
+
+def base_context(request):
+    """Context processor to add common data to all templates"""
+    if request.user.is_authenticated:
+        return {
+            'unread_notifications': Notification.objects.filter(
+                user=request.user, 
+                read=False
+            ).count(),
+            'user_teams': Team.objects.filter(
+                members__user=request.user
+            ).distinct(),
+            'team_members_count': TeamMember.objects.filter(
+                team__members__user=request.user
+            ).distinct().count(),
+            'completed_tasks_count': Task.objects.filter(
+                assigned_to=request.user,
+                status=TASK_STATUS_DONE
+            ).count(),
+            'tasks_count': Task.objects.filter(
+                assigned_to=request.user
+            ).count()
+        }
+    return {}    
+
+@login_required
+@handle_view_errors
+def notification_list(request):
+    """View to display all notifications for the current user"""
+    notifications = (Notification.objects.filter(user=request.user)
+                    .select_related('user')
+                    .order_by('-created_at'))
+    
+    paginator = Paginator(notifications, 10)  # Show 10 notifications per page
+    page = request.GET.get('page')
+    notifications = paginator.get_page(page)
+    
+    return render(request, 'projects/notifications.html', {
+        'notifications': notifications,
+        'unread_count': notifications.filter(read=False).count()
+    })
+
+# In views.py, add these new views
+
+@login_required
+@handle_view_errors
+def project_stats(request, project_id):
+    """Display project statistics"""
+    project = get_object_or_404(Project.objects.select_related('team', 'manager'), id=project_id)
+    if not has_project_permission(request.user, project):
+        messages.error(request, MSG_PERMISSION_DENIED)
+        return redirect('project_list')
+    
+    context = {
+        'project': project,
+        'completion_rate': calculate_completion_rate(project.tasks.all()),
+        'task_distribution': get_task_distribution(request.user, project),
+        'timeline_data': get_completion_trend(request.user, project)
+    }
+    return render(request, 'projects/project_stats.html', context)
+
+@login_required
+@handle_view_errors
+def project_timeline(request, project_id):
+    """Display project timeline"""
+    project = get_object_or_404(Project.objects.select_related('team', 'manager'), id=project_id)
+    if not has_project_permission(request.user, project):
+        messages.error(request, MSG_PERMISSION_DENIED)
+        return redirect('project_list')
+    
+    tasks = Task.objects.filter(project=project).order_by('start_date')
+    context = {
+        'project': project,
+        'tasks': tasks,
+        'timeline_labels': get_timeline_labels()
+    }
+    return render(request, 'projects/project_timeline.html', context)
+
+@login_required
+@handle_view_errors
+def member_detail(request, team_id, member_id):
+    """Display team member details"""
+    team = get_object_or_404(Team, id=team_id)
+    member = get_object_or_404(TeamMember, id=member_id, team=team)
+    if not has_team_permission(request.user, team):
+        messages.error(request, MSG_PERMISSION_DENIED)
+        return redirect('team_list')
+    
+    context = {
+        'team': team,
+        'member': member,
+        'tasks': Task.objects.filter(assigned_to=member.user, project__team=team)
+    }
+    return render(request, 'projects/member_detail.html', context)
+
+@login_required
+@handle_view_errors
+def member_tasks(request, team_id, member_id):
+    """Display tasks assigned to team member"""
+    team = get_object_or_404(Team, id=team_id)
+    member = get_object_or_404(TeamMember, id=member_id, team=team)
+    if not has_team_permission(request.user, team):
+        messages.error(request, MSG_PERMISSION_DENIED)
+        return redirect('team_list')
+    
+    tasks = Task.objects.filter(assigned_to=member.user, project__team=team)
+    return render(request, 'projects/member_tasks.html', {
+        'team': team,
+        'member': member,
+        'tasks': tasks
+    })
+
+@login_required
+@handle_view_errors
+def dashboard(request):
+    """Main dashboard view"""
+    context = get_common_context(request.user)
+    return render(request, 'projects/dashboard.html', context)
+
+@login_required
+@handle_view_errors
+def dashboard_overview(request):
+    """Dashboard overview with analytics"""
+    context = {
+        'projects': get_user_projects(request.user),
+        'tasks': get_user_tasks(request.user),
+        'completion_rate': calculate_completion_rate(request.user),
+        'task_distribution': get_task_distribution(request.user)
+    }
+    return render(request, 'projects/dashboard_overview.html', context)
+
+@login_required
+@handle_view_errors
+@transaction_handler
+def project_files(request, project_id):
+    """Display project files"""
+    project = get_object_or_404(Project, id=project_id)
+    if not has_project_permission(request.user, project):
+        messages.error(request, MSG_PERMISSION_DENIED)
+        return redirect('project_list')
+    
+    files = File.objects.filter(task__project=project)
+    return render(request, 'projects/project_files.html', {
+        'project': project,
+        'files': files
+    })
+
+@login_required
+@handle_view_errors
+@transaction_handler
+def upload_file(request, project_id):
+    """Upload file to project"""
+    project = get_object_or_404(Project, id=project_id)
+    if not has_project_permission(request.user, project):
+        messages.error(request, MSG_PERMISSION_DENIED)
+        return redirect('project_list')
+    
+    if request.method == 'POST':
+        form = FileForm(request.POST, request.FILES)
+        if form.is_valid():
+            file = form.save(commit=False)
+            file.uploaded_by = request.user
+            file.save()
+            messages.success(request, 'File uploaded successfully!')
+            return redirect('project_files', project_id=project_id)
+    else:
+        form = FileForm()
+    
+    return render(request, 'projects/upload_file.html', {
+        'form': form,
+        'project': project
+    })
+
+@login_required
+@handle_view_errors
+@transaction_handler
+def delete_file(request, file_id):
+    """Delete project file"""
+    file = get_object_or_404(File, id=file_id)
+    if not has_project_permission(request.user, file.task.project):
+        messages.error(request, MSG_PERMISSION_DENIED)
+        return redirect('project_list')
+    
+    project_id = file.task.project.id
+    file.delete()
+    messages.success(request, 'File deleted successfully!')
+    return redirect('project_files', project_id=project_id)    

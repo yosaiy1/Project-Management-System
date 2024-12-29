@@ -27,9 +27,10 @@
     <header class="navbar glass-nav fixed-top border-bottom">
         <div class="container-fluid px-4">
             <div class="d-flex align-items-center gap-3">
-                <button id="sidebarToggle" class="btn btn-icon rounded-circle p-2 hover-translate" 
-                        aria-label="Toggle Sidebar" aria-expanded="false" aria-controls="sidebar">
-                    <i class="bi bi-list fs-4"></i>
+                <!-- Add aria-controls and button type -->
+                <button type="button" id="sidebarToggle" class="btn btn-icon rounded-circle p-2 hover-translate" 
+                aria-label="Toggle Sidebar" aria-expanded="false" aria-controls="sidebar">
+                <i class="bi bi-list fs-4"></i>
                 </button>
                 <a class="navbar-brand d-flex align-items-center gap-2 hover-translate" href="{% url 'homepage' %}">
                     <i class="bi bi-kanban fs-4 text-primary"></i>
@@ -39,15 +40,19 @@
 
             <div class="d-flex align-items-center gap-4">
                 <!-- Search -->
-                <div class="search-wrapper d-none d-md-flex align-items-center glass-card px-3 py-2 position-relative" role="search">
-                    <i class="bi bi-search text-muted search-icon" aria-hidden="true"></i>
-                    <input class="form-control border-0 bg-transparent shadow-none ms-2 search-input" 
-                           type="search" placeholder="Search projects..." 
-                           aria-label="Search projects" autocomplete="off">
-                    <div class="search-spinner spinner-border spinner-border-sm text-primary ms-2 d-none" 
-                         role="status" aria-hidden="true"></div>
+                <div class="search-wrapper d-none d-md-flex align-items-center glass-card px-3 py-2 position-relative">
+                    <i class="bi bi-search text-muted search-icon"></i>
+                    <input type="search" 
+                        class="form-control border-0 bg-transparent shadow-none ms-2 search-input" 
+                        placeholder="Search projects..." 
+                        aria-label="Search projects"
+                        data-search-url="{% url 'api_search' %}"
+                        autocomplete="off">
+                    <div class="search-spinner spinner-border spinner-border-sm text-primary ms-2 d-none" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
                     <div class="search-results position-absolute w-100 start-0 top-100 mt-2 rounded-3 shadow-lg bg-white p-2 d-none"
-                         role="listbox"></div>
+                        role="listbox" aria-label="Search results"></div>
                 </div>
 
                 <!-- Action Buttons -->
@@ -62,7 +67,7 @@
                             <a href="{% url 'project_create' %}" class="dropdown-item rounded-3 p-2 hover-translate">
                                 <i class="bi bi-folder-plus me-2"></i>New Project
                             </a>
-                            <a href="{% url 'task_create' 0 %}" class="dropdown-item rounded-3 p-2 hover-translate">
+                            <a href="{% url 'task_create' %}" class="dropdown-item rounded-3 p-2 hover-translate">
                                 <i class="bi bi-check-square me-2"></i>New Task
                             </a>
                         </div>
@@ -200,38 +205,46 @@
         </div>
 
         <!-- Main Navigation -->
-        <div class="navigation-sections">
-            <!-- Dashboard Section -->
-            <div class="nav-section">
-                <div class="nav-section-header">
-                    <h6 class="section-title">Dashboard</h6>
-                </div>
-                <div class="nav-items">
-                    <a href="{% url 'homepage' %}" class="nav-link {% if request.resolver_match.url_name == 'homepage' %}active{% endif %}">
-                        <i class="bi bi-house-door"></i>
-                        <span>Overview</span>
-                        <span class="badge">{{ projects_count }}</span>
-                    </a>
-                </div>
-            </div>
+        <!-- Navigation Sections -->
+<div class="navigation-sections">
+    <!-- Dashboard Section -->
+    <div class="nav-section">
+        <div class="nav-section-header">
+            <h6 class="section-title">Dashboard</h6>
+        </div>
+        <div class="nav-items">
+            <a href="{% url 'homepage' %}" 
+               class="nav-link {% if request.resolver_match.url_name == 'homepage' %}active{% endif %}">
+                <i class="bi bi-house-door"></i>
+                <span>Overview</span>
+                {% if projects_count %}
+                    <span class="badge bg-primary">{{ projects_count }}</span>
+                {% endif %}
+            </a>
+        </div>
+    </div>
 
-            <!-- Projects Section -->
-            <div class="nav-section">
-                <div class="nav-section-header">
-                    <h6 class="section-title">Projects</h6>
-                    <span class="badge bg-info">{{ active_projects_count }}</span>
-                </div>
-                <div class="nav-items">
-                    <a href="{% url 'project_list' %}" class="nav-link">
-                        <i class="bi bi-folder"></i>
-                        <span>All Projects</span>
-                    </a>
-                    <a href="{% url 'project_create' %}" class="nav-link">
-                        <i class="bi bi-folder-plus"></i>
-                        <span>New Project</span>
-                    </a>
-                </div>
-            </div>
+    <!-- Projects Section -->
+    <div class="nav-section">
+        <div class="nav-section-header">
+            <h6 class="section-title">Projects</h6>
+            {% if active_projects_count %}
+                <span class="badge bg-info">{{ active_projects_count }}</span>
+            {% endif %}
+        </div>
+        <div class="nav-items">
+            <a href="{% url 'project_list' %}" 
+               class="nav-link {% if request.resolver_match.url_name == 'project_list' %}active{% endif %}">
+                <i class="bi bi-folder"></i>
+                <span>All Projects</span>
+            </a>
+            <a href="{% url 'project_create' %}" 
+               class="nav-link {% if request.resolver_match.url_name == 'project_create' %}active{% endif %}">
+                <i class="bi bi-folder-plus"></i>
+                <span>New Project</span>
+            </a>
+        </div>
+    </div>
 
             <!-- Tasks Section -->
             <div class="nav-section">
@@ -239,40 +252,79 @@
                     <h6 class="section-title">Tasks</h6>
                     <span class="badge bg-warning">{{ pending_tasks_count }}</span>
                 </div>
+                <div class="nav-items">
+                    <a href="{% url 'task_list' %}" class="nav-link {% if request.resolver_match.url_name == 'task_list' %}active{% endif %}">
+                        <i class="bi bi-list-check"></i>
+                        <span>All Tasks</span>
+                    </a>
+                    <a href="{% url 'task_create' %}" class="nav-link {% if request.resolver_match.url_name == 'task_create' %}active{% endif %}">
+                        <i class="bi bi-plus-square"></i>
+                        <span>New Task</span>
+                    </a>
+                </div>
                 <div class="progress-wrapper">
-                    <div class="progress-status">
+                    <div class="progress-status d-flex justify-content-between">
                         <span>Overall Progress</span>
-                        <span>{{ completion_rate }}%</span>
+                        <span>{{ completion_rate|default:0 }}%</span>
                     </div>
                     <div class="progress">
-                        <div class="progress-bar" style="width: {{ completion_rate }}%"></div>
+                        <div class="progress-bar bg-primary" 
+                             role="progressbar" 
+                             style="width: {{ completion_rate|default:0 }}%" 
+                             aria-valuenow="{{ completion_rate|default:0 }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                        </div>
                     </div>
-                    <div class="status-info">
+                    <div class="status-info d-flex justify-content-between">
                         <span>Completed</span>
-                        <span>{{ completed_tasks_count }}/{{ tasks_count }}</span>
+                        <span>{{ completed_tasks_count|default:0 }}/{{ tasks_count|default:0 }}</span>
                     </div>
                 </div>
             </div>
 
             <!-- Team Section -->
-            {% if user.is_staff or team %}
+            {% if user.is_staff or user_teams %}
             <div class="nav-section">
                 <div class="nav-section-header">
                     <h6 class="section-title">Team</h6>
-                    <span class="badge bg-success">{{ team_members_count }}</span>
+                    {% if team_members_count %}
+                        <span class="badge bg-success">{{ team_members_count }}</span>
+                    {% endif %}
                 </div>
                 <div class="nav-items">
-                    <a href="{% url 'team_list' %}" class="nav-link">
+                    <a href="{% url 'team_list' %}" class="nav-link {% if request.resolver_match.url_name == 'team_list' %}active{% endif %}">
                         <i class="bi bi-people"></i>
                         <span>Team Overview</span>
                     </a>
-                    <a href="{% url 'member_progress' %}" class="nav-link">
+                    <a href="{% url 'all_team_members' %}" class="nav-link {% if request.resolver_match.url_name == 'all_team_members' %}active{% endif %}">
+                        <i class="bi bi-person-plus"></i>
+                        <span>Manage Members</span>
+                    </a>
+                    <a href="{% url 'member_progress' %}" class="nav-link {% if request.resolver_match.url_name == 'member_progress' %}active{% endif %}">
                         <i class="bi bi-graph-up"></i>
                         <span>Progress</span>
                     </a>
                 </div>
             </div>
             {% endif %}
+
+            <!-- Analytics Section -->
+            <div class="nav-section">
+                <div class="nav-section-header">
+                    <h6 class="section-title">Analytics</h6>
+                </div>
+                <div class="nav-items">
+                    <a href="{% url 'analytics' %}" class="nav-link {% if request.resolver_match.url_name == 'analytics' %}active{% endif %}">
+                        <i class="bi bi-bar-chart"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="{% url 'reports' %}" class="nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span>Reports</span>
+                    </a>
+                </div>
+            </div>
         </div>
 
         <!-- Quick Stats -->

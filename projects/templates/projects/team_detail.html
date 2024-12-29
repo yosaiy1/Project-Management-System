@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}{{ team.name }} - Team Details{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/team_detail.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex align-items-center justify-content-between">
+                <h2>{{ team.name }}</h2>
+                {% if can_manage %}
+                <div class="btn-group">
+                    <a href="{% url 'manage_team_members' team.id %}" class="btn btn-primary">
+                        <i class="bi bi-people"></i> Manage Members
+                    </a>
+                    <a href="{% url 'team_projects' team.id %}" class="btn btn-outline-primary">
+                        <i class="bi bi-folder"></i> View Projects
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            <p class="text-muted">{{ team.description }}</p>
+        </div>
+    </div>
+
+    <!-- Team Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-people display-6 text-primary mb-3"></i>
+                    <h3 class="card-title h2 mb-2">{{ members|length }}</h3>
+                    <p class="card-text text-muted">Team Members</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-folder display-6 text-info mb-3"></i>
+                    <h3 class="card-title h2 mb-2">{{ projects|length }}</h3>
+                    <p class="card-text text-muted">Total Projects</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-check-circle display-6 text-success mb-3"></i>
+                    <h3 class="card-title h2 mb-2">{{ projects|completed_projects_count|default:0 }}</h3>
+                    <p class="card-text text-muted">Completed Projects</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-clock-history display-6 text-warning mb-3"></i>
+                    <h3 class="card-title h2 mb-2">{{ team.created_at|time_since|default:'New' }}</h3>
+                    <p class="card-text text-muted">Team Age</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0">
+                    <h3 class="h5 mb-0">Overview</h3>
+                </div>
+                <div class="card-body">
+                    <div class="progress mb-3" style="height: 20px;">
+                        <div class="progress-bar bg-{{ team.progress|default:0|progress_color }}" 
+                             role="progressbar" 
+                             style="width: {{ team.progress|default:0 }}%"
+                             aria-valuenow="{{ team.progress|default:0 }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            {{ team.progress|default:0 }}%
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between text-muted small">
+                        <span>Active Projects: {{ projects|length|default:0 }}</span>
+                        <span>Completed Tasks: {{ tasks|completed_tasks_count|default:0 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Members Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+            <h3 class="h5 mb-0">Team Members</h3>
+            {% if can_manage %}
+            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#inviteMemberModal">
+                <i class="bi bi-plus"></i> Invite Member
+            </button>
+            {% endif %}
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Member</th>
+                            <th>Role</th>
+                            <th class="text-center">Projects</th>
+                            <th class="text-center">Tasks</th>
+                            <th>Last Active</th>
+                            {% if can_manage %}
+                            <th class="text-end">Actions</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for member in members %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    {% if member.user.profile.avatar %}
+                                        <img src="{{ member.user.profile.avatar.url }}" 
+                                             class="rounded-circle me-2" 
+                                             width="32" 
+                                             height="32"
+                                             alt="{{ member.user.username }}'s avatar">
+                                    {% else %}
+                                        <div class="avatar-placeholder me-2">
+                                            {{ member.user.username|first|upper }}
+                                        </div>
+                                    {% endif %}
+                                    <div>
+                                        <div class="fw-bold">{{ member.user.get_full_name|default:member.user.username }}</div>
+                                        <small class="text-muted">@{{ member.user.username }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ member.role|role_color }}">
+                                    {{ member.get_role_display }}
+                                </span>
+                            </td>
+                            <td class="text-center">{{ member.user.assigned_projects.count|default:0 }}</td>
+                            <td class="text-center">
+                                <span>{{ member.user.assigned_tasks.count|default:0 }}</span>
+                                <small class="text-success ms-2">
+                                    ({{ member.user.completed_tasks_count|default:0 }} done)
+                                </small>
+                            </td>
+                            <td>{{ member.user.last_login|time_since|default:'Never' }}</td>
+                            {% if can_manage and member.user != team.owner %}
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" 
+                                            title="Edit Role"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#editRoleModal"
+                                            data-member-id="{{ member.id }}">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger"
+                                            title="Remove Member"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#removeMemberModal"
+                                            data-member-id="{{ member.id }}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="{% if can_manage %}6{% else %}5{% endif %}" class="text-center py-4">
+                                <div class="text-muted">
+                                    <i class="bi bi-people display-6 d-block mb-2"></i>
+                                    <p class="mb-0">No team members yet</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "projects/modals/invite_member.html" %}
+{% include "projects/modals/edit_role.html" %}
+{% include "projects/modals/remove_member.html" %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/team_detail.js' %}"></script>
+{% endblock %}

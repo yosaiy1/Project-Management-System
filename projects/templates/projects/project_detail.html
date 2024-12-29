@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
-
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}{{ project.name }} - Project Detail{% endblock %}
 
@@ -9,51 +9,131 @@
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col">
-            <h2 class="text-center">{{ project.name }}</h2>
-            <p class="text-center">{{ project.description }}</p>
-            <p class="text-center"><strong>Start Date:</strong> {{ project.start_date }}</p>
-            <p class="text-center"><strong>End Date:</strong> {{ project.end_date }}</p>
-        </div>
-    </div>
-
+<div class="container py-4">
+    <!-- Project Header -->
     <div class="row mb-4">
         <div class="col">
             <div class="d-flex justify-content-between align-items-center">
-                <h3>Tasks</h3>
-                <a href="{% url 'task_create' project.id %}" class="btn btn-primary">Add Task</a>
+                <h2>{{ project.name }}</h2>
+                {% if can_manage %}
+                <div class="btn-group">
+                    <a href="{% url 'project_update' project.id %}" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil"></i> Edit Project
+                    </a>
+                    <a href="{% url 'project_delete' project.id %}" class="btn btn-outline-danger">
+                        <i class="bi bi-trash"></i> Delete Project
+                    </a>
+                </div>
+                {% endif %}
             </div>
-            <hr>
+            <p class="text-muted mt-2">{{ project.description }}</p>
         </div>
     </div>
 
-    <div class="row">
-        {% for task in tasks %}
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">{{ task.title }}</h5>
-                    <p class="card-text">{{ task.description|truncatewords:20 }}</p>
-                    <a href="{% url 'task_detail' project.id task.id %}" class="btn btn-outline-primary">View Task</a>
-                </div>
-                <div class="card-footer text-muted">
-                    <small>Due Date: {{ task.due_date }}</small>
+    <!-- Project Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-calendar-event display-6 text-primary mb-3"></i>
+                    <h3 class="card-title h2 mb-2">{{ project.start_date|date:"M d, Y" }}</h3>
+                    <p class="card-text text-muted">Start Date</p>
                 </div>
             </div>
         </div>
-        {% empty %}
-        <div class="col">
-            <p class="text-center">No tasks available for this project. <a href="{% url 'task_create' project.id %}">Add a new task</a>.</p>
+        <div class="col-md-3 col-sm-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-calendar-check display-6 text-info mb-3"></i>
+                    <h3 class="card-title h2 mb-2">{{ project.end_date|date:"M d, Y" }}</h3>
+                    <p class="card-text text-muted">Due Date</p>
+                </div>
+            </div>
         </div>
-        {% endfor %}
+        <div class="col-md-3 col-sm-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-list-check display-6 text-success mb-3"></i>
+                    <h3 class="card-title h2 mb-2">{{ tasks|length }}</h3>
+                    <p class="card-text text-muted">Total Tasks</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-check2-circle display-6 text-warning mb-3"></i>
+                    <h3 class="card-title h2 mb-2">{{ tasks|completed_tasks_count }}</h3>
+                    <p class="card-text text-muted">Completed Tasks</p>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="row mt-4">
-        <div class="col text-center">
-            <a href="{% url 'homepage' %}" class="btn btn-secondary">Back to Homepage</a>
+    <!-- Tasks Section -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center py-3">
+            <h3 class="h5 mb-0">Project Tasks</h3>
+            <a href="{% url 'project_task_create' project.id %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-lg"></i> Add Task
+            </a>
         </div>
+        <div class="card-body p-0">
+            {% if tasks %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Title</th>
+                            <th>Assigned To</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task in tasks %}
+                        <tr>
+                            <td>{{ task.title }}</td>
+                            <td>{{ task.assigned_to.username }}</td>
+                            <td>{{ task.due_date|date:"M d, Y" }}</td>
+                            <td>
+                                <span class="badge bg-{{ task.status|task_status_color }}">
+                                    {{ task.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'task_detail' project.id task.id %}" class="btn btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'task_update' project.id task.id %}" class="btn btn-outline-info">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-list-check display-4 text-muted mb-3"></i>
+                <p class="text-muted mb-3">No tasks available for this project</p>
+                <a href="{% url 'project_task_create' project.id %}" class="btn btn-primary">
+                    <i class="bi bi-plus-lg"></i> Add First Task
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Back Button -->
+    <div class="text-center mt-4">
+        <a href="{% url 'project_list' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Projects
+        </a>
     </div>
 </div>
 {% endblock %}

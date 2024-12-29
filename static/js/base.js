@@ -84,21 +84,17 @@ document.addEventListener('DOMContentLoaded', function() {
         init() {
             this.themeToggle = document.getElementById('themeToggle');
             this.prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
-            
-            // Get saved theme or use system preference
             this.currentTheme = localStorage.getItem('theme') || 
                               (this.prefersDark.matches ? 'dark' : 'light');
-            
             this.applyTheme(this.currentTheme);
             this.bindEvents();
         },
 
         applyTheme(theme) {
             document.documentElement.setAttribute('data-theme', theme);
-            document.body.className = `theme-${theme}`;
+            document.body.setAttribute('data-bs-theme', theme);
             localStorage.setItem('theme', theme);
             
-            // Update toggle button icon
             if (this.themeToggle) {
                 const icon = this.themeToggle.querySelector('i');
                 if (icon) {
@@ -108,14 +104,12 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         bindEvents() {
-            // Theme toggle click
             this.themeToggle?.addEventListener('click', () => {
                 const newTheme = this.currentTheme === 'light' ? 'dark' : 'light';
                 this.currentTheme = newTheme;
                 this.applyTheme(newTheme);
             });
 
-            // System theme change
             this.prefersDark.addEventListener('change', (e) => {
                 if (!localStorage.getItem('theme')) {
                     this.applyTheme(e.matches ? 'dark' : 'light');
@@ -128,290 +122,596 @@ document.addEventListener('DOMContentLoaded', function() {
     const sidebarSystem = {
         init() {
             this.sidebar = document.getElementById('sidebar');
-            this.toggle = document.getElementById('sidebarToggle');
-            this.overlay = document.querySelector('.sidebar-overlay');
-            this.mainContent = document.getElementById('main-content');
-            this.mobileBreakpoint = 768;
-            
-            this.state = {
-                expanded: localStorage.getItem('sidebarExpanded') === 'true',
-                isMobile: window.innerWidth < this.mobileBreakpoint
-            };
-
-            this.setupSidebar();
+            this.sidebarToggle = document.getElementById('sidebarToggle');
+            this.sidebarOverlay = document.querySelector('.sidebar-overlay');
             this.bindEvents();
-        },
-
-        setupSidebar() {
-            this.updateSidebarState(this.state.expanded && !this.state.isMobile);
-            
-            // Touch support for mobile
-            if (this.sidebar) {
-                let touchStartX = 0;
-                let touchEndX = 0;
-
-                this.sidebar.addEventListener('touchstart', e => {
-                    touchStartX = e.changedTouches[0].screenX;
-                }, { passive: true });
-
-                this.sidebar.addEventListener('touchend', e => {
-                    touchEndX = e.changedTouches[0].screenX;
-                    if (touchStartX - touchEndX > 50) {
-                        this.updateSidebarState(false);
-                    }
-                }, { passive: true });
-            }
-        },
-
-        updateSidebarState(expanded) {
-            this.state.expanded = expanded;
-            document.body.classList.toggle('sidebar-expanded', expanded);
-            this.sidebar?.classList.toggle('show', expanded);
-            this.overlay?.classList.toggle('show', expanded && this.state.isMobile);
-            localStorage.setItem('sidebarExpanded', expanded);
-
-            if (this.toggle) {
-                this.toggle.setAttribute('aria-expanded', expanded.toString());
-            }
+            this.handleResize();
         },
 
         bindEvents() {
-            // Toggle click
-            this.toggle?.addEventListener('click', () => {
-                this.updateSidebarState(!this.state.expanded);
-            });
+            this.sidebarToggle?.addEventListener('click', () => this.toggleSidebar());
+            this.sidebarOverlay?.addEventListener('click', () => this.closeSidebar());
+        },
 
-            // Overlay click
-            this.overlay?.addEventListener('click', () => {
-                this.updateSidebarState(false);
-            });
-
-            // Window resize
+        handleResize() {
             window.addEventListener('resize', utils.debounce(() => {
-                const wasMobile = this.state.isMobile;
-                this.state.isMobile = window.innerWidth < this.mobileBreakpoint;
-                
-                if (wasMobile !== this.state.isMobile) {
-                    this.updateSidebarState(this.state.isMobile ? false : this.state.expanded);
+                if (window.innerWidth > 768) {
+                    document.body.classList.remove('sidebar-expanded');
                 }
             }, 250));
+        },
 
-            // Escape key
+        toggleSidebar() {
+            document.body.classList.toggle('sidebar-expanded');
+        },
+
+        closeSidebar() {
+            document.body.classList.remove('sidebar-expanded');
+        }
+    };
+
+    const searchSystem = {
+        init() {
+            this.searchInput = document.querySelector('.search-input');
+            this.searchResults = document.querySelector('.search-results');
+            this.searchSpinner = document.querySelector('.search-spinner');
+            this.currentIndex = -1;
+            this.results = [];
+            if (this.searchInput && this.searchResults) {
+                this.bindEvents();
+            }
+        },
+    
+        bindEvents() {
+            // Debounced search handler
+            const searchHandler = utils.debounce((e) => {
+                const query = e.target.value.trim();
+                if (query.length >= 2) {
+                    this.performSearch(query);
+                } else {
+                    this.hideResults();
+                }
+            }, 300);
+    
+            // Click outside handler
+            const clickOutsideHandler = (e) => {
+                if (!this.searchResults.contains(e.target) && !this.searchInput.contains(e.target)) {
+                    this.hideResults();
+                }
+            };
+    
+            // Keyboard navigation
+            const keyHandler = (e) => {
+                switch(e.key) {
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        this.navigateResults(1);
+                        break;
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        this.navigateResults(-1);
+                        break;
+                    case 'Enter':
+                        if (this.currentIndex >= 0) {
+                            e.preventDefault();
+                            const selectedLink = this.searchResults.querySelector(`a:nth-child(${this.currentIndex + 1})`);
+                            if (selectedLink) selectedLink.click();
+                        }
+                        break;
+                    case 'Escape':
+                        this.hideResults();
+                        this.searchInput.blur();
+                        break;
+                }
+            };
+    
+            // Bind events
+            this.searchInput.addEventListener('input', searchHandler);
+            this.searchInput.addEventListener('keydown', keyHandler);
+            document.addEventListener('click', clickOutsideHandler);
+            
+            // Store cleanup function
+            this.cleanup = () => {
+                this.searchInput.removeEventListener('input', searchHandler);
+                this.searchInput.removeEventListener('keydown', keyHandler);
+                document.removeEventListener('click', clickOutsideHandler);
+            };
+        },
+    
+        navigateResults(direction) {
+            const items = this.searchResults.querySelectorAll('a');
+            if (!items.length) return;
+    
+            items[this.currentIndex]?.classList.remove('active');
+            this.currentIndex = (this.currentIndex + direction + items.length) % items.length;
+            items[this.currentIndex]?.classList.add('active');
+            items[this.currentIndex]?.scrollIntoView({ block: 'nearest' });
+        },
+    
+        hideResults() {
+            this.searchResults.classList.add('d-none');
+            this.currentIndex = -1;
+            this.results = [];
+        },
+    
+        async performSearch(query) {
+            try {
+                this.searchSpinner?.classList.remove('d-none');
+                const response = await fetch(`/api/search/?q=${encodeURIComponent(query)}`, {
+                    headers: {
+                        'X-CSRFToken': utils.getCookie('csrftoken')
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Search request failed');
+                
+                const data = await response.json();
+                if (data.status === 'success') {
+                    this.results = data.results;
+                    this.displayResults(data.results);
+                } else {
+                    throw new Error(data.message || 'Search failed');
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                utils.showNotification(error.message, 'error');
+                this.displayError();
+            } finally {
+                this.searchSpinner?.classList.add('d-none');
+            }
+        },
+    
+        displayResults(results) {
+            if (!this.searchResults) return;
+    
+            try {
+                if (!Array.isArray(results)) throw new Error('Invalid results format');
+    
+                this.searchResults.innerHTML = results.length ? 
+                    results.map((result, index) => `
+                        <a href="${result.url}" 
+                           class="d-block p-2 text-decoration-none rounded hover-bg-light"
+                           role="option"
+                           aria-selected="${index === this.currentIndex}">
+                            <i class="bi bi-${result.type === 'project' ? 'folder' : 'check-square'} me-2"></i>
+                            <span>${result.title}</span>
+                        </a>
+                    `).join('') :
+                    `<div class="p-3 text-center text-muted" role="status">
+                        <i class="bi bi-search me-2"></i>
+                        <span>No results found</span>
+                    </div>`;
+    
+                this.searchResults.classList.remove('d-none');
+                this.searchResults.setAttribute('role', 'listbox');
+            } catch (error) {
+                console.error('Display error:', error);
+                this.displayError();
+            }
+        },
+    
+        displayError() {
+            if (!this.searchResults) return;
+            
+            this.searchResults.innerHTML = `
+                <div class="p-3 text-center text-danger" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <span>Error displaying results</span>
+                </div>
+            `;
+            this.searchResults.classList.remove('d-none');
+        }
+    };
+
+    // Notification System
+    const notificationSystem = {
+        init() {
+            this.setupNotificationListeners();
+            this.autoHideNotifications();
+        },
+
+        setupNotificationListeners() {
+            const notifications = document.querySelectorAll('.notification-item');
+            if (!notifications.length) return;
+        
+            notifications.forEach(item => {
+                if (!item.dataset.read) {
+                    item.addEventListener('click', () => this.markAsRead(item));
+                }
+            });
+        },
+
+        autoHideNotifications() {
+            document.querySelectorAll('.notification-toast').forEach(notification => {
+                setTimeout(() => {
+                    notification.classList.add('fade-out');
+                    setTimeout(() => notification.remove(), 300);
+                }, 5000);
+            });
+        },
+
+        async markAsRead(notificationElement) {
+            try {
+                const id = notificationElement.dataset.id;
+                const response = await fetch(`/notifications/mark-read/${id}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': utils.getCookie('csrftoken')
+                    }
+                });
+                
+                if (response.ok) {
+                    notificationElement.classList.remove('unread');
+                    this.updateUnreadCount();
+                }
+            } catch (error) {
+                console.error('Error marking notification as read:', error);
+                utils.showNotification('Failed to mark notification as read', 'error');
+            }
+        },
+
+        updateUnreadCount() {
+            const badge = document.querySelector('.notification-badge');
+            if (badge) {
+                const currentCount = parseInt(badge.textContent) - 1;
+                if (currentCount <= 0) {
+                    badge.remove();
+                } else {
+                    badge.textContent = currentCount;
+                }
+            }
+        }
+    };
+
+    // Progress System
+    const progressSystem = {
+        init() {
+            this.progressBars = document.querySelectorAll('.progress-bar[data-value]');
+            this.animateProgressBars();
+        },
+
+        animateProgressBars() {
+            this.progressBars.forEach(bar => {
+                const value = parseFloat(bar.dataset.value) || 0;
+                bar.style.width = '0%';
+                setTimeout(() => {
+                    bar.style.transition = 'width 1s ease-in-out';
+                    bar.style.width = `${value}%`;
+                }, 100);
+            });
+        }
+    };
+
+    // Stats Animation System
+    const statsSystem = {
+        init() {
+            this.stats = document.querySelectorAll('[data-stat-value]');
+            this.animateStats();
+        },
+
+        animateStats() {
+            this.stats.forEach(stat => {
+                const endValue = parseInt(stat.dataset.statValue) || 0;
+                utils.animateValue(stat, 0, endValue, 1000);
+            });
+        }
+    };
+
+    // Keyboard Shortcuts
+    const keyboardShortcuts = {
+        init() {
             document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && this.state.expanded) {
-                    this.updateSidebarState(false);
+                // Toggle sidebar with Ctrl + B
+                if (e.ctrlKey && e.key === 'b') {
+                    e.preventDefault();
+                    sidebarSystem.toggleSidebar();
+                }
+                
+                // Focus search with Ctrl + K
+                if (e.ctrlKey && e.key === 'k') {
+                    e.preventDefault();
+                    searchSystem.searchInput?.focus();
                 }
             });
         }
     };
 
-    // Search System
-    const searchSystem = {
-        init() {
-            this.wrapper = document.querySelector('.search-wrapper');
-            this.input = this.wrapper?.querySelector('input[type="search"]');
-            this.results = this.wrapper?.querySelector('.search-results');
-            this.spinner = this.wrapper?.querySelector('.search-spinner');
+    // Page Visibility Handler
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            progressSystem.animateProgressBars();
+            statsSystem.animateStats();
+        }
+    });
 
-            if (!this.wrapper || !this.input) return;
+    // Task Management System
+const taskSystem = {
+    init() {
+        this.bindTaskEvents();
+        this.setupTaskSorting();
+    },
 
-            this.state = {
-                currentTerm: '',
-                isSearching: false,
-                selectedIndex: -1
-            };
-
-            this.bindEvents();
-        },
-
-        async performSearch(term) {
-            if (!term || term.length < 2) {
-                this.hideResults();
-                return;
+    bindTaskEvents() {
+        document.addEventListener('click', e => {
+            const taskStatusBtn = e.target.closest('[data-task-status]');
+            if (taskStatusBtn) {
+                const taskId = taskStatusBtn.dataset.taskId;
+                const newStatus = taskStatusBtn.dataset.taskStatus;
+                this.updateTaskStatus(taskId, newStatus);
             }
+        });
+    },
 
-            try {
-                this.setState({ isSearching: true });
-                const response = await fetch(`/api/search?q=${encodeURIComponent(term)}`);
-                
-                if (!response.ok) throw new Error('Search failed');
-                
-                const results = await response.json();
-                
-                if (term === this.state.currentTerm) {
-                    this.showResults(results);
-                }
-            } catch (error) {
-                console.error('Search error:', error);
-                utils.showNotification('Search failed. Please try again.', 'error');
-            } finally {
-                this.setState({ isSearching: false });
-            }
-        },
-
-        setState(newState) {
-            this.state = { ...this.state, ...newState };
-            this.spinner?.classList.toggle('d-none', !this.state.isSearching);
-            this.wrapper?.classList.toggle('is-searching', this.state.isSearching);
-        },
-
-        showResults(results) {
-            if (!this.results) return;
-
-            if (!results.length) {
-                this.results.innerHTML = `
-                    <div class="search-empty p-3 text-center">
-                        <i class="bi bi-search fs-4 mb-2"></i>
-                        <p class="mb-0">No results found</p>
-                    </div>
-                `;
-            } else {
-                this.results.innerHTML = results.map((item, index) => `
-                    <a href="${item.url}" 
-                       class="search-result-item ${index === this.state.selectedIndex ? 'active' : ''}"
-                       role="option"
-                       aria-selected="${index === this.state.selectedIndex}">
-                        <i class="bi bi-${this.getItemIcon(item.type)}"></i>
-                        <div class="result-content">
-                            <div class="result-title">${item.title}</div>
-                            <div class="result-meta">${item.description}</div>
-                        </div>
-                    </a>
-                `).join('');
-            }
-
-            this.results.classList.add('show');
-        },
-
-        hideResults() {
-            this.results?.classList.remove('show');
-        },
-
-        getItemIcon(type) {
-            return {
-                'project': 'folder',
-                'task': 'check-square',
-                'user': 'person'
-            }[type] || 'file-text';
-        },
-
-        bindEvents() {
-            // Search input
-            this.input?.addEventListener('input', utils.debounce((e) => {
-                const term = e.target.value.trim();
-                this.state.currentTerm = term;
-                this.performSearch(term);
-            }, 300));
-
-            // Keyboard navigation
-            this.input?.addEventListener('keydown', (e) => {
-                const results = this.results?.querySelectorAll('.search-result-item') || [];
-                
-                switch(e.key) {
-                    case 'ArrowDown':
-                    case 'ArrowUp':
-                        e.preventDefault();
-                        this.navigateResults(e.key === 'ArrowUp' ? -1 : 1, results.length);
-                        break;
-                    case 'Enter':
-                        if (this.state.selectedIndex >= 0) {
-                            e.preventDefault();
-                            results[this.state.selectedIndex]?.click();
-                        }
-                        break;
-                    case 'Escape':
-                        this.hideResults();
-                        this.input.blur();
-                        break;
-                }
+    async updateTaskStatus(taskId, status) {
+        try {
+            const response = await fetch(`/update_task_status/${taskId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': utils.getCookie('csrftoken')
+                },
+                body: JSON.stringify({ status })
             });
-                        // Click outside to close results
-                        document.addEventListener('click', (e) => {
-                            if (!this.wrapper?.contains(e.target)) {
-                                this.hideResults();
-                            }
-                        });
-                    },
-            
-                    navigateResults(direction, totalResults) {
-                        if (totalResults === 0) return;
-            
-                        this.state.selectedIndex = ((this.state.selectedIndex + direction) + totalResults) % totalResults;
-                        
-                        const results = this.results?.querySelectorAll('.search-result-item');
-                        results?.forEach((result, index) => {
-                            result.classList.toggle('active', index === this.state.selectedIndex);
-                            result.setAttribute('aria-selected', index === this.state.selectedIndex);
-                            
-                            if (index === this.state.selectedIndex) {
-                                result.scrollIntoView({ block: 'nearest' });
-                            }
-                        });
-                    }
-                };
-            
-                // Progress System
-                const progressSystem = {
-                    init() {
-                        this.progressBars = document.querySelectorAll('.progress-bar[data-value]');
-                        this.animateProgressBars();
-                    },
-            
-                    animateProgressBars() {
-                        this.progressBars.forEach(bar => {
-                            const value = parseFloat(bar.dataset.value) || 0;
-                            bar.style.width = '0%';
-                            
-                            setTimeout(() => {
-                                bar.style.transition = 'width 1s ease-in-out';
-                                bar.style.width = `${value}%`;
-                            }, 100);
-                        });
-                    }
-                };
-            
-                // Stats Animation System
-                const statsSystem = {
-                    init() {
-                        this.stats = document.querySelectorAll('[data-stat-value]');
-                        this.animateStats();
-                    },
-            
-                    animateStats() {
-                        this.stats.forEach(stat => {
-                            const endValue = parseInt(stat.dataset.statValue) || 0;
-                            utils.animateValue(stat, 0, endValue, 1000);
-                        });
-                    }
-                };
-            
-                // Initialize all systems
-                try {
-                    themeSystem.init();
-                    sidebarSystem.init();
-                    searchSystem.init();
-                    progressSystem.init();
-                    statsSystem.init();
-                } catch (error) {
-                    console.error('Initialization error:', error);
-                    utils.showNotification('Failed to initialize application', 'error');
+            if (response.ok) {
+                utils.showNotification('Task updated successfully', 'success');
+                // Refresh task lists if needed
+                if (window.location.pathname.includes('/tasks/')) {
+                    window.location.reload();
                 }
-            
-                // Handle page visibility changes
-                document.addEventListener('visibilitychange', () => {
-                    if (document.visibilityState === 'visible') {
-                        progressSystem.animateProgressBars();
-                        statsSystem.animateStats();
-                    }
+            }
+        } catch (error) {
+            console.error('Task update error:', error);
+            utils.showNotification('Failed to update task', 'error');
+        }
+    },
+
+    setupTaskSorting() {
+        const taskLists = document.querySelectorAll('.task-list');
+        if (!taskLists.length) return;
+    
+        try {
+            taskLists.forEach(list => {
+                new Sortable(list, {
+                    animation: 150,
+                    ghostClass: 'task-ghost',
+                    onEnd: this.handleTaskReorder.bind(this)
                 });
-            
-                // Export systems for potential external use
-                window.projectHub = {
-                    utils,
-                    themeSystem,
-                    sidebarSystem,
-                    searchSystem,
-                    progressSystem,
-                    statsSystem
-                };
             });
+        } catch (error) {
+            console.error('Task sorting setup error:', error);
+            utils.showNotification('Failed to setup task sorting', 'error');
+        }
+    }
+};
+
+// Modal System
+const modalSystem = {
+    init() {
+        this.setupDynamicModals();
+    },
+
+    setupDynamicModals() {
+        document.addEventListener('click', e => {
+            const modalTrigger = e.target.closest('[data-modal]');
+            if (modalTrigger) {
+                const modalId = modalTrigger.dataset.modal;
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    new bootstrap.Modal(modal).show();
+                }
+            }
+        });
+    }
+};
+
+// Analytics System
+const analyticsSystem = {
+    init() {
+        this.setupCharts();
+    },
+
+    setupCharts() {
+        const charts = document.querySelectorAll('[data-chart]');
+        charts.forEach(chart => {
+            const type = chart.dataset.chart;
+            const data = JSON.parse(chart.dataset.chartData || '{}');
+            this.createChart(chart, type, data);
+        });
+    },
+
+    createChart(element, type, data) {
+        if (!element || !type || !data) return;
+        
+        try {
+            return new Chart(element, {
+                type,
+                data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        } catch (error) {
+            console.error('Chart creation error:', error);
+            utils.showNotification('Failed to create chart', 'error');
+        }
+    }
+};
+
+// Form System
+const formSystem = {
+    init() {
+        this.setupFormValidation();
+        this.setupFileUploads();
+        this.setupFormSubmission();
+    },
+
+    setupFormValidation() {
+        const forms = document.querySelectorAll('form[data-validate]');
+        forms.forEach(form => {
+            form.addEventListener('submit', this.validateForm.bind(this));
+        });
+    },
+
+    setupFileUploads() {
+        const fileInputs = document.querySelectorAll('input[type="file"]');
+        fileInputs.forEach(input => {
+            input.addEventListener('change', this.handleFileSelect.bind(this));
+        });
+    },
+
+    setupFormSubmission() {
+        const ajaxForms = document.querySelectorAll('form[data-ajax]');
+        ajaxForms.forEach(form => {
+            form.addEventListener('submit', this.handleAjaxSubmit.bind(this));
+        });
+    },
+
+    validateForm(e) {
+        const form = e.target;
+        const isValid = form.checkValidity();
+        
+        if (!isValid) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const invalidInputs = form.querySelectorAll(':invalid');
+            invalidInputs.forEach(input => {
+                utils.showNotification(input.validationMessage, 'error');
+            });
+        }
+        
+        form.classList.add('was-validated');
+    },
+
+    handleFileSelect(e) {
+        const input = e.target;
+        const files = Array.from(input.files);
+        const maxSize = (input.dataset.maxSize || 5) * 1024 * 1024; // Default 5MB
+        
+        files.forEach(file => {
+            if (file.size > maxSize) {
+                utils.showNotification(`File ${file.name} is too large`, 'error');
+                input.value = '';
+            }
+        });
+
+        // Update file preview if exists
+        const previewEl = document.querySelector(`[data-preview-for="${input.id}"]`);
+        if (previewEl && files[0]) {
+            const reader = new FileReader();
+            reader.onload = e => previewEl.src = e.target.result;
+            reader.readAsDataURL(files[0]);
+        }
+    },
+
+    async handleAjaxSubmit(e) {
+        e.preventDefault();
+        const form = e.target;
+        
+        try {
+            const formData = new FormData(form);
+            const response = await fetch(form.action, {
+                method: form.method,
+                headers: {
+                    'X-CSRFToken': utils.getCookie('csrftoken')
+                },
+                body: formData
+            });
+            
+            const data = await response.json();
+            if (data.status === 'success') {
+                utils.showNotification(data.message || 'Success', 'success');
+                if (data.redirect) window.location.href = data.redirect;
+            } else {
+                throw new Error(data.message || 'Submission failed');
+            }
+        } catch (error) {
+            console.error('Form submission error:', error);
+            utils.showNotification(error.message, 'error');
+        }
+    }
+};
+
+taskSystem.handleTaskReorder = async function(evt) {
+    if (!evt?.item?.dataset?.taskId || evt.newIndex === undefined) {
+        console.error('Invalid task reorder event:', evt);
+        return;
+    }
+
+    try {
+        const taskId = evt.item.dataset.taskId;
+        const newIndex = evt.newIndex;
+        const listId = evt.to.dataset.listId;
+
+        const response = await fetch(`/tasks/${taskId}/reorder/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': utils.getCookie('csrftoken')
+            },
+            body: JSON.stringify({ 
+                position: newIndex,
+                list_id: listId
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Reorder failed');
+        }
+
+        utils.showNotification('Task reordered successfully', 'success');
+        
+        // Update task positions if needed
+        if (data.positions) {
+            this.updateTaskPositions(data.positions);
+        }
+
+    } catch (error) {
+        console.error('Task reorder error:', error);
+        utils.showNotification(error.message || 'Failed to reorder task', 'error');
+        
+        // Revert the change in UI
+        evt.item.parentNode.insertBefore(evt.item, evt.oldIndex < evt.newIndex 
+            ? evt.item.parentNode.children[evt.oldIndex]
+            : evt.item.parentNode.children[evt.oldIndex + 1]
+        );
+    }
+};
+
+  // Update initialization
+try {
+    themeSystem.init();
+    progressSystem.init();
+    statsSystem.init();
+    sidebarSystem.init();
+    searchSystem.init();
+    notificationSystem.init();
+    keyboardShortcuts.init();
+    taskSystem.init();
+    modalSystem.init();
+    analyticsSystem.init();
+    formSystem.init();
+} catch (error) {
+    console.error('Initialization error:', error);
+    utils.showNotification('Failed to initialize application', 'error');
+}
+
+// Update exports
+window.projectHub = {
+    utils,
+    themeSystem,
+    progressSystem,
+    statsSystem,
+    sidebarSystem,
+    searchSystem,
+    notificationSystem,
+    keyboardShortcuts,
+    taskSystem,
+    modalSystem,
+    analyticsSystem,
+    formSystem
+    }
+});

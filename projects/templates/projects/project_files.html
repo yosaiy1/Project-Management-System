@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Project Files{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Files for {{ project.name }}</h2>
+        <a href="{% url 'upload_file' project.id %}" class="btn btn-primary">
+            <i class="bi bi-upload"></i> Upload File
+        </a>
+    </div>
+
+    {% if files %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Task</th>
+                        <th>Uploaded By</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for file in files %}
+                    <tr>
+                        <td>{{ file.file_name }}</td>
+                        <td>{{ file.task.title }}</td>
+                        <td>{{ file.uploaded_by.username }}</td>
+                        <td>{{ file.created_at|date:"M d, Y" }}</td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{{ file.file.url }}" class="btn btn-sm btn-primary" download>
+                                    <i class="bi bi-download"></i>
+                                </a>
+                                <form action="{% url 'delete_file' file.id %}" method="POST" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="text-center">
+            <p>No files uploaded yet.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

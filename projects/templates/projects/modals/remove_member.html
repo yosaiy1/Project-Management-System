@@ -1,18 +1,55 @@
-<div class="modal fade" id="removeMemberModal" tabindex="-1" aria-labelledby="removeMemberModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
+<!-- Remove Member Modal -->
+<div class="modal fade" id="removeMemberModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card">
             <div class="modal-header">
-                <h5 class="modal-title" id="removeMemberModalLabel">Remove Team Member</h5>
+                <h5 class="modal-title">
+                    <i class="bi bi-person-x text-danger me-2"></i>Remove Team Member
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to remove this member from the team?</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="removeMemberForm" method="POST" class="d-inline">
+                <div class="alert bg-danger bg-opacity-10 border-0">
+                    <p class="mb-2">Are you sure you want to remove <strong id="memberNameRemove"></strong> from the team?</p>
+                    <small class="text-danger">
+                        This action will:
+                        <ul class="mb-0 mt-2">
+                            <li>Remove the member from all team projects</li>
+                            <li>Unassign their tasks</li>
+                            <li>Revoke their access to team resources</li>
+                        </ul>
+                    </small>
+                </div>
+                <!-- Remove form action - will be set dynamically via JavaScript -->
+                <form method="POST" data-ajax>
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-danger">Remove Member</button>
+                    <input type="hidden" name="member_id" value="">
+                    <div class="form-group mb-3">
+                        <label for="remove_reason" class="form-label">Reason (optional)</label>
+                        <textarea id="remove_reason" 
+                                  name="reason" 
+                                  class="form-control"
+                                  rows="3"
+                                  placeholder="Explain why this member is being removed"></textarea>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" 
+                               class="form-check-input" 
+                               id="notifyMember" 
+                               name="notify_member" 
+                               checked>
+                        <label class="form-check-label" for="notifyMember">
+                            Notify member via email
+                        </label>
+                    </div>
+                    <div class="modal-footer border-top-0 px-0 pb-0">
+                        <button type="button" class="btn btn-outline-secondary hover-translate" data-bs-dismiss="modal">
+                            <i class="bi bi-x-lg me-2"></i>Cancel
+                        </button>
+                        <button type="submit" class="btn btn-danger hover-translate">
+                            <i class="bi bi-person-x me-2"></i>Remove Member
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>

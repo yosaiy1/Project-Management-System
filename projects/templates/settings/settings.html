@@ -1,75 +1,605 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Settings{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/settings.css' %}">
+{% endblock %}
+
 {% block content %}
-<div class="container mt-5">
-    <h2>Settings</h2>
-    <div class="row">
-        <!-- User Profile Settings -->
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">User Profile Settings</h5>
-                </div>
+<div class="container-fluid px-4">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="gradient-text mb-0">Settings</h2>
+            <p class="text-muted mt-2">Manage your account and preferences</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Profile Settings -->
+        <div class="col-lg-6">
+            <div class="glass-card">
                 <div class="card-body">
-                    <form method="post" action="{% url 'update_profile' %}" enctype="multipart/form-data">
+                    <h5 class="card-title mb-4">Profile Settings</h5>
+                    <form id="profileSettingsForm" 
+                        method="post"
+                        action="{% url 'update_profile' %}" 
+                        enctype="multipart/form-data" 
+                        class="needs-validation"
+                        novalidate>  <!-- Removed data-ajax attribute -->
                         {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="first_name" class="form-label">First Name</label>
-                            <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name }}">
+                        
+                        <!-- Avatar Upload -->
+                        <div class="text-center mb-4">
+                            <div class="avatar-upload">
+                                <div class="avatar-preview rounded-circle mx-auto mb-3">
+                                    {% if user.profile.profile_picture %}
+                                        <img src="{{ user.profile.profile_picture.url }}" 
+                                             alt="Profile" 
+                                             class="w-100 h-100 rounded-circle object-fit-cover">
+                                    {% else %}
+                                        <div class="avatar-placeholder h-100 d-flex align-items-center justify-content-center">
+                                            {{ user.username|slice:":1"|upper }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="upload-controls">
+                                    <label class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-camera me-2"></i>Change Photo
+                                        <input type="file" name="profile_picture" class="d-none" accept="image/*">
+                                    </label>
+                                    {% if user.profile.profile_picture %}
+                                    <button type="button" class="btn btn-outline-danger btn-sm" id="removeAvatar">
+                                        <i class="bi bi-trash me-2"></i>Remove
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="last_name" class="form-label">Last Name</label>
-                            <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name }}">
+
+                        <!-- Profile Info -->
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="first_name" class="form-label">First Name</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" 
+                                       value="{{ user.first_name }}" required>
+                                <div class="invalid-feedback">Please enter your first name.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="last_name" class="form-label">Last Name</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" 
+                                       value="{{ user.last_name }}" required>
+                                <div class="invalid-feedback">Please enter your last name.</div>
+                            </div>
+                            <div class="col-12">
+                                <label for="email" class="form-label">Email Address</label>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       value="{{ user.email }}" required>
+                                <div class="invalid-feedback">Please enter a valid email address.</div>
+                            </div>
+                            <div class="col-12">
+                                <label for="bio" class="form-label">Bio</label>
+                                <textarea class="form-control" id="bio" name="bio" rows="3" 
+                                          placeholder="Tell us about yourself">{{ user.profile.bio }}</textarea>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}">
+
+                        <div class="d-flex justify-content-end mt-4">
+                            <button type="submit" class="btn btn-primary hover-translate" data-loading-text="Saving...">
+                                <i class="bi bi-save me-2"></i>Save Changes
+                            </button>
                         </div>
-                        <div class="mb-3">
-                            <label for="profile_picture" class="form-label">Profile Picture</label>
-                            <input type="file" class="form-control" id="profile_picture" name="profile_picture">
-                        </div>
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
                     </form>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Account Settings -->
-    <div class="row">
-        <div class="col-md-12">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Account Settings</h5>
-                </div>
+        <!-- Account Settings -->
+        <div class="col-lg-6">
+            <!-- Password Change -->
+            <div class="glass-card mb-4">
                 <div class="card-body">
-                    <form method="post" action="{% url 'change_password' %}">
+                    <h5 class="card-title mb-4">Security Settings</h5>
+                    <form id="changePasswordForm"
+                        method="post" 
+                        action="{% url 'change_password' %}" 
+                        class="needs-validation"
+                        data-ajax 
+                        novalidate>
                         {% csrf_token %}
                         <div class="mb-3">
                             <label for="old_password" class="form-label">Current Password</label>
-                            <input type="password" class="form-control" id="old_password" name="old_password">
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="old_password" name="old_password" required>
+                                <button class="btn btn-outline-secondary" type="button" data-password-toggle="old_password">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <div class="invalid-feedback">Please enter your current password.</div>
                         </div>
                         <div class="mb-3">
                             <label for="new_password1" class="form-label">New Password</label>
-                            <input type="password" class="form-control" id="new_password1" name="new_password1">
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="new_password1" name="new_password1" 
+                                    pattern=".{8,}" required>
+                                <button class="btn btn-outline-secondary" type="button" data-password-toggle="new_password1">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">Password must be at least 8 characters long</div>
+                            <div class="invalid-feedback">Please enter a new password.</div>
                         </div>
                         <div class="mb-3">
                             <label for="new_password2" class="form-label">Confirm New Password</label>
-                            <input type="password" class="form-control" id="new_password2" name="new_password2">
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="new_password2" name="new_password2" required>
+                                <button class="btn btn-outline-secondary" type="button" data-password-toggle="new_password2">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <div class="invalid-feedback">Passwords do not match.</div>
                         </div>
-                        <button type="submit" class="btn btn-primary">Change Password</button>
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary hover-translate" data-loading-text="Updating...">
+                                <i class="bi bi-key me-2"></i>Update Password
+                            </button>
+                        </div>
                     </form>
-                    <hr>
-                    <form method="post" action="{% url 'delete_account' %}">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-danger">Delete Account</button>
-                    </form>
+                </div>
+            </div>
+
+            <!-- Theme Settings -->
+            <div class="glass-card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">Display Settings</h5>
+                    <div class="mb-3">
+                        <label class="form-label">Theme Mode</label>
+                        <div class="theme-options">
+                            <button class="btn btn-outline-primary" data-theme="light">
+                                <i class="bi bi-sun me-2"></i>Light
+                            </button>
+                            <button class="btn btn-outline-primary" data-theme="dark">
+                                <i class="bi bi-moon-stars me-2"></i>Dark
+                            </button>
+                            <button class="btn btn-outline-primary" data-theme="system">
+                                <i class="bi bi-display me-2"></i>System
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="glass-card border-danger">
+                <div class="card-body">
+                    <h5 class="card-title text-danger mb-4">Danger Zone</h5>
+                    <p class="text-muted mb-4">Once you delete your account, there is no going back. Please be certain.</p>
+                    <button type="button" class="btn btn-danger hover-translate" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                        <i class="bi bi-trash me-2"></i>Delete Account
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Delete Account Modal -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle text-danger me-2"></i>Delete Account
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-danger bg-danger bg-opacity-10 border-0">
+                    <p class="mb-2">Are you sure you want to delete your account? This action cannot be undone.</p>
+                    <small class="text-danger">All your projects, tasks, and data will be permanently deleted.</small>
+                </div>
+                <form method="post" 
+                      action="{% url 'delete_account' %}" 
+                      class="needs-validation"
+                      data-ajax 
+                      novalidate>
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">Enter your password to confirm</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                            <button class="btn btn-outline-secondary" type="button" data-password-toggle="confirm_password">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Please enter your password to confirm.</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-secondary hover-translate" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="deleteAccountForm" class="btn btn-danger hover-translate">
+                    <i class="bi bi-trash me-2"></i>Delete Account
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const settingsSystem = {
+            elements: {
+                profileForm: document.getElementById('profileSettingsForm'),
+                passwordForm: document.getElementById('changePasswordForm'),
+                removeAvatarBtn: document.getElementById('removeAvatar'),
+                themeButtons: document.querySelectorAll('[data-theme]'),
+                newPassword1: document.getElementById('new_password1'),
+                newPassword2: document.getElementById('new_password2'),
+                deleteAccountForm: document.getElementById('deleteAccountForm'),
+                avatarInput: document.querySelector('input[name="avatar"]'),
+                avatarPreview: document.querySelector('.avatar-preview')
+            },
+    
+            init() {
+                this.setupTheme();
+                this.setupPasswordValidation();
+                this.setupAvatarHandling();
+                this.setupFormSubmission();
+            },
+    
+            setupTheme() {
+                const currentTheme = localStorage.getItem('theme') || 'system';
+                document.querySelector(`[data-theme="${currentTheme}"]`)?.classList.add('active');
+                
+                this.elements.themeButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        if (button.classList.contains('active')) return;
+    
+                        const theme = button.dataset.theme;
+                        window.projectHub.themeSystem.applyTheme(theme);
+                        localStorage.setItem('theme', theme);
+                        
+                        this.elements.themeButtons.forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+                    });
+                });
+            },
+    
+            setupPasswordValidation() {
+                const { newPassword1, newPassword2 } = this.elements;
+                if (newPassword2 && newPassword1) {
+                    newPassword2.addEventListener('input', () => {
+                        if (newPassword2.value !== newPassword1.value) {
+                            newPassword2.setCustomValidity('Passwords do not match');
+                        } else {
+                            newPassword2.setCustomValidity('');
+                        }
+                    });
+    
+                    newPassword1.addEventListener('input', () => {
+                        if (newPassword2.value) {
+                            newPassword2.dispatchEvent(new Event('input'));
+                        }
+                    });
+                }
+            },
+    
+            setupAvatarHandling() {
+                const { removeAvatarBtn, avatarPreview } = this.elements;
+                const avatarInput = document.querySelector('input[name="profile_picture"]');
+                
+                if (avatarInput) {
+                    avatarInput.addEventListener('change', (e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                            // Validate file size (2MB limit)
+                            if (file.size > 2 * 1024 * 1024) {
+                                window.projectHub.utils.showNotification(
+                                    'Image size should be less than 2MB',
+                                    'error'
+                                );
+                                avatarInput.value = '';
+                                return;
+                            }
+            
+                            // Validate file type
+                            if (!file.type.startsWith('image/')) {
+                                window.projectHub.utils.showNotification(
+                                    'Please select an image file',
+                                    'error'
+                                );
+                                avatarInput.value = '';
+                                return;
+                            }
+            
+                            // Preview image
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                                avatarPreview.innerHTML = `
+                                    <img src="${e.target.result}" 
+                                         alt="Profile" 
+                                         class="w-100 h-100 rounded-circle object-fit-cover">
+                                `;
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    });
+                }
+            
+                if (removeAvatarBtn) {
+                    removeAvatarBtn.addEventListener('click', async () => {
+                        try {
+                            const response = await fetch('/profile/remove-avatar/', {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRFToken': window.projectHub.utils.getCookie('csrftoken'),
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                }
+                            });
+            
+                            const data = await response.json();
+            
+                            if (!response.ok) {
+                                throw new Error(data.message || 'Failed to remove profile picture');
+                            }
+            
+                            if (data.success) {
+                                // Update avatar preview
+                                avatarPreview.innerHTML = `
+                                    <div class="avatar-placeholder h-100 d-flex align-items-center justify-content-center">
+                                        ${data.initial}
+                                    </div>`;
+                                
+                                // Update navbar avatar if exists
+                                const navbarAvatar = document.querySelector('.user-avatar');
+                                if (navbarAvatar) {
+                                    navbarAvatar.innerHTML = `
+                                        <div class="avatar-placeholder d-flex align-items-center justify-content-center h-100">
+                                            ${data.initial}
+                                        </div>`;
+                                }
+            
+                                // Remove the remove button
+                                removeAvatarBtn.remove();
+            
+                                window.projectHub.utils.showNotification(
+                                    'Profile picture removed successfully',
+                                    'success'
+                                );
+                            }
+                        } catch (error) {
+                            console.error('Avatar removal error:', error);
+                            window.projectHub.utils.showNotification(
+                                error.message || 'Failed to remove profile picture',
+                                'error'
+                            );
+                        }
+                    });
+                }
+    
+                if (removeAvatarBtn) {
+                    removeAvatarBtn.addEventListener('click', async () => {
+                        try {
+                            const response = await fetch('/profile/remove-avatar/', {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRFToken': window.projectHub.utils.getCookie('csrftoken'),
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                }
+                            });
+    
+                            const data = await response.json();
+                            if (data.success) {
+                                avatarPreview.innerHTML = `
+                                    <div class="avatar-placeholder h-100 d-flex align-items-center justify-content-center">
+                                        ${data.initial}
+                                    </div>`;
+                                removeAvatarBtn.remove();
+                                window.projectHub.utils.showNotification(
+                                    'Profile picture removed',
+                                    'success'
+                                );
+                            }
+                        } catch (error) {
+                            window.projectHub.utils.showNotification(
+                                'Failed to remove profile picture',
+                                'error'
+                            );
+                        }
+                    });
+                }
+            },
+    
+            setupFormSubmission() {
+                // Setup password toggles
+                document.querySelectorAll('[data-password-toggle]').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const input = document.getElementById(this.dataset.passwordToggle);
+                        const type = input.type === 'password' ? 'text' : 'password';
+                        input.type = type;
+                        this.querySelector('i').classList.toggle('bi-eye');
+                        this.querySelector('i').classList.toggle('bi-eye-slash');
+                    });
+                });
+    
+                // Handle forms
+                this.setupProfileForm();
+                this.setupPasswordForm();
+                this.setupDeleteAccountForm();
+            },
+    
+            setupProfileForm() {
+                const form = this.elements.profileForm;
+                if (!form) return;
+            
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    if (!form.checkValidity()) {
+                        form.classList.add('was-validated');
+                        return;
+                    }
+            
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    const originalText = submitBtn.innerHTML;
+            
+                    try {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Saving...`;
+            
+                        const formData = new FormData(form);
+                        const response = await fetch(form.action, {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                            },
+                            body: formData
+                        });
+            
+                        const data = await response.json();
+            
+                        if (response.ok && data.success) {
+                            window.projectHub.utils.showNotification(
+                                'Profile updated successfully',
+                                'success'
+                            );
+                            // Update avatar in navbar if it exists
+                            if (data.profile_picture_url) {
+                                const navbarAvatar = document.querySelector('.user-avatar img');
+                                if (navbarAvatar) {
+                                    navbarAvatar.src = data.profile_picture_url;
+                                }
+                            }
+                            window.location.reload();
+                        } else {
+                            throw new Error(data.message || 'Failed to update profile');
+                        }
+                    } catch (error) {
+                        console.error('Profile update error:', error);
+                        window.projectHub.utils.showNotification(
+                            error.message || 'Failed to update profile',
+                            'error'
+                        );
+                    } finally {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalText;
+                    }
+                });
+            },
+    
+            setupPasswordForm() {
+                const form = this.elements.passwordForm;
+                if (!form) return;
+    
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    if (!form.checkValidity()) {
+                        form.classList.add('was-validated');
+                        return;
+                    }
+    
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    const originalText = submitBtn.innerHTML;
+    
+                    try {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Updating...`;
+    
+                        const response = await fetch(form.action, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: new FormData(form)
+                        });
+    
+                        const data = await response.json();
+    
+                        if (response.ok && data.success) {
+                            window.projectHub.utils.showNotification(
+                                'Password updated successfully',
+                                'success'
+                            );
+                            form.reset();
+                        } else {
+                            throw new Error(data.message || 'Failed to update password');
+                        }
+                    } catch (error) {
+                        console.error('Password update error:', error);
+                        window.projectHub.utils.showNotification(
+                            error.message || 'Failed to update password',
+                            'error'
+                        );
+                    } finally {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalText;
+                    }
+                });
+            },
+    
+            setupDeleteAccountForm() {
+                const form = this.elements.deleteAccountForm;
+                if (!form) return;
+    
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    if (!form.checkValidity()) {
+                        form.classList.add('was-validated');
+                        return;
+                    }
+    
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    const originalText = submitBtn.innerHTML;
+    
+                    try {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Deleting...`;
+    
+                        const response = await fetch(form.action, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: new FormData(form)
+                        });
+    
+                        const data = await response.json();
+    
+                        if (response.ok && data.success) {
+                            window.location.href = data.redirect_url || '/login/';
+                        } else {
+                            throw new Error(data.message || 'Failed to delete account');
+                        }
+                    } catch (error) {
+                        console.error('Account deletion error:', error);
+                        window.projectHub.utils.showNotification(
+                            error.message || 'Failed to delete account',
+                            'error'
+                        );
+                    } finally {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalText;
+                    }
+                });
+            }
+        };
+    
+        try {
+            settingsSystem.init();
+        } catch (error) {
+            console.error('Settings initialization error:', error);
+            window.projectHub.utils.showNotification(
+                'Failed to initialize settings',
+                'error'
+            );
+        }
+    });
+    </script>
+    {% endblock %}

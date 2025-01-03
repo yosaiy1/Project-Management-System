@@ -32,7 +32,7 @@ class CustomUserAdmin(BaseUserAdmin):
     )
 
     def delete_model(self, request, obj):
-        if obj.tasks.exists() or obj.teams.exists():
+        if obj.assigned_tasks.exists() or obj.team_memberships.exists():
             self.message_user(
                 request,
                 f"Cannot delete user '{obj.username}' because they are associated with tasks or teams.",

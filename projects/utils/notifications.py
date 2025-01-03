@@ -111,3 +111,18 @@ def mark_notifications_as_read(user, notification_ids=None):
     except Exception as e:
         logger.error(f"Error marking notifications as read: {str(e)}")
         return 0
+
+def notify_team_changes(user, team, action_type, message):
+    """Send notifications for team-related actions"""
+    notification = Notification.objects.create(
+        user=user,
+        message=message,
+        action_type=action_type,
+        related_object=team
+    )
+    
+    if action_type == 'team_member_removed':
+        # Send email notification
+        send_team_removal_email(user, team)
+        
+    return notification

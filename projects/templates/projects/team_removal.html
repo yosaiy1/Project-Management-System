@@ -1,0 +1,14 @@
+{% extends 'emails/base_email.html' %}
+
+{% block content %}
+<p>Hi {{ user.get_full_name|default:user.username }},</p>
+
+<p>You have been removed from the team "{{ team.name }}".</p>
+
+{% if reason %}
+<p><strong>Reason provided:</strong><br>
+{{ reason }}</p>
+{% endif %}
+
+<p>If you believe this was done in error, please contact the team owner.</p>
+{% endblock %}

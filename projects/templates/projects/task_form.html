@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block title %}
-    {% if project %}Create Task for {{ project.name }}{% else %}Create New Task{% endif %}
+    {% if task %}Edit Task{% else %}Create Task{% endif %}
 {% endblock %}
 
 {% block extra_css %}
@@ -10,45 +10,429 @@
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col">
-            <h2 class="text-center">
-                {% if project %}
-                    Create Task for Project: {{ project.name }}
-                {% else %}
-                    Create New Task
-                {% endif %}
+<div class="container py-4">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="gradient-text mb-0">
+                {% if task %}Edit Task{% else %}Create Task{% endif %}
             </h2>
+            <p class="text-muted">
+                {% if project %}
+                    Project: {{ project.name }}
+                {% else %}
+                    Create a new task to track progress
+                {% endif %}
+            </p>
         </div>
+        {% if project %}
+            <a href="{% url 'project_detail' project.id %}" class="btn btn-outline-secondary hover-translate">
+                <i class="bi bi-arrow-left me-2"></i>Back to Project
+            </a>
+        {% else %}
+            <a href="{% url 'task_list' %}" class="btn btn-outline-secondary hover-translate">
+                <i class="bi bi-arrow-left me-2"></i>Back to Tasks
+            </a>
+        {% endif %}
     </div>
 
-    {% if messages %}
-    <div class="alert-container">
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
+    <!-- Form Section -->
     <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <form method="POST" class="shadow-sm p-4 bg-white rounded">
-                {% csrf_token %}
-                {{ form.as_p }}
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-primary">Create Task</button>
-                    {% if project %}
-                        <a href="{% url 'project_detail' project.id %}" class="btn btn-secondary">Cancel</a>
-                    {% else %}
-                        <a href="{% url 'task_list' %}" class="btn btn-secondary">Cancel</a>
-                    {% endif %}
+        <div class="col-lg-8">
+            <div class="glass-card">
+                <form method="POST" class="needs-validation" novalidate data-ajax>
+                    {% csrf_token %}
+                    
+                    <!-- Title -->
+                    <div class="form-group mb-4">
+                        <label for="{{ form.title.id_for_label }}" class="form-label">Title*</label>
+                        <input type="text" 
+                               name="{{ form.title.name }}" 
+                               id="{{ form.title.id_for_label }}" 
+                               class="form-control {% if form.title.errors %}is-invalid{% endif %}"
+                               value="{{ form.title.value|default:'' }}"
+                               required
+                               minlength="3"
+                               maxlength="200"
+                               placeholder="Enter task title">
+                        {% if form.title.errors %}
+                        <div class="invalid-feedback">{{ form.title.errors|join:", " }}</div>
+                        {% endif %}
+                        <div class="form-text">Choose a clear, descriptive title (3-200 characters)</div>
+                    </div>
+
+                    <!-- Project -->
+                    <div class="form-group mb-4">
+                        <label for="{{ form.project.id_for_label }}" class="form-label">Project*</label>
+                        {% if project %}
+                            <input type="hidden" name="{{ form.project.name }}" value="{{ project.id }}">
+                            <input type="text" class="form-control" value="{{ project.name }}" disabled>
+                        {% else %}
+                            <select name="{{ form.project.name }}" 
+                                id="{{ form.project.id_for_label }}" 
+                                class="form-select {% if form.project.errors %}is-invalid{% endif %}"
+                                required>
+                                <option value="">Select project</option>
+                                {% for value, label in form.project.field.choices %}
+                                <option value="{{ value }}" {% if form.project.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.project.errors %}
+                            <div class="invalid-feedback">{{ form.project.errors|join:", " }}</div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+
+                    <!-- Description -->
+                    <div class="form-group mb-4">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                        <textarea name="{{ form.description.name }}" 
+                                  id="{{ form.description.id_for_label }}" 
+                                  class="form-control {% if form.description.errors %}is-invalid{% endif %}"
+                                  rows="4"
+                                  maxlength="500"
+                                  placeholder="Describe the task details and requirements">{{ form.description.value|default:'' }}</textarea>
+                        {% if form.description.errors %}
+                        <div class="invalid-feedback">{{ form.description.errors|join:", " }}</div>
+                        {% endif %}
+                        <div class="form-text">
+                            <span id="descriptionCount">0</span>/500 characters
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <!-- Start Date -->
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="{{ form.start_date.id_for_label }}" class="form-label">Start Date*</label>
+                                <input type="date" 
+                                       name="{{ form.start_date.name }}" 
+                                       id="{{ form.start_date.id_for_label }}" 
+                                       class="form-control {% if form.start_date.errors %}is-invalid{% endif %}"
+                                       value="{{ form.start_date.value|date:'Y-m-d'|default:'' }}"
+                                       required>
+                                {% if form.start_date.errors %}
+                                <div class="invalid-feedback">{{ form.start_date.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Due Date -->
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="{{ form.due_date.id_for_label }}" class="form-label">Due Date*</label>
+                                <input type="date" 
+                                       name="{{ form.due_date.name }}" 
+                                       id="{{ form.due_date.id_for_label }}" 
+                                       class="form-control {% if form.due_date.errors %}is-invalid{% endif %}"
+                                       value="{{ form.due_date.value|date:'Y-m-d'|default:'' }}"
+                                       required>
+                                {% if form.due_date.errors %}
+                                <div class="invalid-feedback">{{ form.due_date.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Priority -->
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="{{ form.priority.id_for_label }}" class="form-label">Priority*</label>
+                                <select name="{{ form.priority.name }}" 
+                                        id="{{ form.priority.id_for_label }}" 
+                                        class="form-select {% if form.priority.errors %}is-invalid{% endif %}"
+                                        required>
+                                    {% for value, label in form.priority.field.choices %}
+                                    <option value="{{ value }}" {% if form.priority.value == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                {% if form.priority.errors %}
+                                <div class="invalid-feedback">{{ form.priority.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Assignees and Status -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.assigned_to.id_for_label }}" class="form-label">Assign To*</label>
+                                <select name="{{ form.assigned_to.name }}" 
+                                        id="{{ form.assigned_to.id_for_label }}" 
+                                        class="form-select {% if form.assigned_to.errors %}is-invalid{% endif %}"
+                                        required>
+                                    <option value="">Select team member</option>
+                                    {% for value, label in form.assigned_to.field.choices %}
+                                    <option value="{{ value }}" {% if form.assigned_to.value == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                {% if form.assigned_to.errors %}
+                                <div class="invalid-feedback">{{ form.assigned_to.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.status.id_for_label }}" class="form-label">Status*</label>
+                                <select name="{{ form.status.name }}" 
+                                        id="{{ form.status.id_for_label }}" 
+                                        class="form-select {% if form.status.errors %}is-invalid{% endif %}"
+                                        required>
+                                    {% for value, label in form.status.field.choices %}
+                                    <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                {% if form.status.errors %}
+                                <div class="invalid-feedback">{{ form.status.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="d-flex justify-content-end gap-2">
+                        {% if project %}
+                            <a href="{% url 'project_detail' project.id %}" class="btn btn-secondary">Cancel</a>
+                        {% else %}
+                            <a href="{% url 'task_list' %}" class="btn btn-secondary">Cancel</a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary hover-translate">
+                            <i class="bi bi-check-lg me-2"></i>
+                            {% if task %}Save Changes{% else %}Create Task{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tips Section -->
+        <div class="col-lg-4">
+            <div class="glass-card">
+                <h5 class="card-title mb-3">Tips for Creating Tasks</h5>
+                <div class="tips-list">
+                    <div class="tip-item">
+                        <i class="bi bi-lightbulb text-warning"></i>
+                        <span>Be specific with task titles</span>
+                    </div>
+                    <div class="tip-item">
+                        <i class="bi bi-calendar-check text-primary"></i>
+                        <span>Set realistic start and due dates</span>
+                    </div>
+                    <div class="tip-item">
+                        <i class="bi bi-person-check text-success"></i>
+                        <span>Assign to appropriate team members</span>
+                    </div>
+                    <div class="tip-item">
+                        <i class="bi bi-flag text-danger"></i>
+                        <span>Set priority based on importance</span>
+                    </div>
+                    <div class="tip-item">
+                        <i class="bi bi-card-checklist text-info"></i>
+                        <span>Choose appropriate task status</span>
+                    </div>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const taskForm = {
+            elements: {
+                form: document.querySelector('form[data-ajax]'),
+                description: document.getElementById('{{ form.description.id_for_label }}'),
+                descriptionCount: document.getElementById('descriptionCount'),
+                submitBtn: document.querySelector('button[type="submit"]'),
+                startDate: document.getElementById('{{ form.start_date.id_for_label }}'),
+                dueDate: document.getElementById('{{ form.due_date.id_for_label }}'),
+                projectSelect: document.getElementById('{{ form.project.id_for_label }}'),
+                assigneeSelect: document.getElementById('{{ form.assigned_to.id_for_label }}')
+            },
+    
+            init() {
+                if (!this.elements.form) return;
+                this.originalBtnText = this.elements.submitBtn?.innerHTML;
+                this.setupDescriptionCounter();
+                this.setupDateValidation();
+                this.setupProjectChange();
+                this.setupFormSubmission();
+            },
+    
+            setupDescriptionCounter() {
+                const { description, descriptionCount } = this.elements;
+                if (!description || !descriptionCount) return;
+    
+                const updateCount = () => {
+                    const count = description.value.length;
+                    descriptionCount.textContent = count;
+                    descriptionCount.classList.toggle('text-danger', count > 500);
+                };
+                
+                description.addEventListener('input', updateCount);
+                updateCount();
+            },
+    
+            setupDateValidation() {
+                const { startDate, dueDate } = this.elements;
+                if (!startDate || !dueDate) return;
+    
+                const validateDates = () => {
+                    if (startDate.value && dueDate.value) {
+                        const start = new Date(startDate.value);
+                        const due = new Date(dueDate.value);
+                        const isValid = start <= due;
+                        dueDate.setCustomValidity(isValid ? '' : 'Due date must be after start date');
+                    }
+                };
+    
+                ['change', 'input'].forEach(event => {
+                    startDate.addEventListener(event, validateDates);
+                    dueDate.addEventListener(event, validateDates);
+                });
+            },
+    
+            setupProjectChange() {
+                const { projectSelect, assigneeSelect } = this.elements;
+                if (!projectSelect || !assigneeSelect) return;
+            
+                // Disable assignee select initially if no project is selected
+                if (!projectSelect.value) {
+                    assigneeSelect.disabled = true;
+                    assigneeSelect.innerHTML = '<option value="">Select a project first</option>';
+                }
+            
+                projectSelect.addEventListener('change', async () => {
+                    const projectId = projectSelect.value;
+                    assigneeSelect.disabled = true;
+            
+                    if (!projectId) {
+                        assigneeSelect.innerHTML = '<option value="">Select a project first</option>';
+                        return;
+                    }
+            
+                    try {
+                        const response = await fetch(`/teams/projects/${projectId}/team-members/`, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json',
+                                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                            }
+                        });
+            
+                        if (!response.ok) {
+                            const data = await response.json();
+                            throw new Error(data.error || 'Failed to fetch team members');
+                        }
+            
+                        const data = await response.json();
+                        assigneeSelect.innerHTML = '<option value="">Select team member</option>';
+                        
+                        if (data.members && Array.isArray(data.members)) {
+                            data.members.forEach(member => {
+                                const option = new Option(member.name, member.id);
+                                assigneeSelect.add(option);
+                            });
+                        }
+                        assigneeSelect.disabled = false;
+            
+                    } catch (error) {
+                        console.error('Error fetching team members:', error);
+                        window.projectHub.utils.showNotification(
+                            error.message,
+                            'error'
+                        );
+                        assigneeSelect.innerHTML = '<option value="">Error loading members</option>';
+                    } finally {
+                        assigneeSelect.disabled = false;
+                    }
+                });
+            },
+    
+            setupFormSubmission() {
+                const { form, submitBtn } = this.elements;
+                
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    
+                    if (!form.checkValidity()) {
+                        e.stopPropagation();
+                        form.classList.add('was-validated');
+                        return;
+                    }
+    
+                    // Validate project selection
+                    const projectInput = form.querySelector('[name="{{ form.project.name }}"]');
+                    if (!projectInput?.value) {
+                        window.projectHub.utils.showNotification('Please select a project', 'error');
+                        return;
+                    }
+    
+                    try {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = `
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            Processing...
+                        `;
+    
+                        const response = await fetch(form.action, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: new FormData(form)
+                        });
+    
+                        const data = await response.json();
+    
+                        if (!response.ok) {
+                            throw new Error(data.message || 'Server error occurred');
+                        }
+    
+                        if (data.success) {
+                            window.projectHub.utils.showNotification(
+                                data.message || 'Task created successfully', 
+                                'success'
+                            );
+                            window.location.href = data.redirect_url;
+                        } else {
+                            throw new Error(data.message || 'Failed to create task');
+                        }
+                    } catch (error) {
+                        console.error('Form submission error:', error);
+                        window.projectHub.utils.showNotification(
+                            error.message || 'Failed to create task',
+                            'error'
+                        );
+                    } finally {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = this.originalBtnText;
+                    }
+                });
+            }
+        };
+    
+        // Initialize task form functionality
+        try {
+            taskForm.init();
+        } catch (error) {
+            console.error('Task form initialization error:', error);
+            window.projectHub.utils.showNotification(
+                'Failed to initialize task form',
+                'error'
+            );
+        }
+    });
+</script>
 {% endblock %}

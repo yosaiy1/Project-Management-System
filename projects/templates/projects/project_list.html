@@ -3,168 +3,314 @@
 
 {% block title %}Projects{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/project_list.css' %}">
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid px-4">
-    <!-- Header -->
+    <!-- Header Section -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">Projects</h2>
+        <div>
+            <h2 class="gradient-text mb-0">Projects</h2>
+            <p class="text-muted mt-2">Manage and monitor your projects</p>
+        </div>
         <div class="d-flex gap-3 align-items-center">
             <!-- Search -->
             <div class="search-wrapper">
-                <input type="search" class="form-control" id="projectSearch" placeholder="Search projects...">
+                <i class="bi bi-search search-icon"></i>
+                <input type="search" 
+                       class="form-control search-input" 
+                       id="projectSearch" 
+                       placeholder="Search projects..."
+                       aria-label="Search projects">
             </div>
             <!-- Filter -->
-            <select class="form-select" id="statusFilter">
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="completed">Completed</option>
-                <option value="on-hold">On Hold</option>
-            </select>
-            <!-- Create Project Button -->
-            <a href="{% url 'project_create' %}" class="btn btn-primary">
+            <div class="filter-wrapper">
+                <select class="form-select" id="statusFilter" aria-label="Filter projects by status">
+                    <option value="all">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="completed">Completed</option>
+                    <option value="on-hold">On Hold</option>
+                </select>
+            </div>
+            <!-- Create Button -->
+            <a href="{% url 'project_create' %}" class="btn btn-primary hover-translate">
                 <i class="bi bi-plus-lg me-2"></i>Create Project
             </a>
         </div>
     </div>
 
-    <!-- Projects Grid -->
-    <div class="row g-4">
-        {% for project in projects %}
-        <div class="col-md-6 col-lg-4 project-card" data-status="{{ project.status }}">
-            <div class="card glass-card h-100">
-                <div class="card-body">
-                    <!-- Project Header -->
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <h5 class="card-title mb-1">
-                                <a href="{% url 'project_detail' project.id %}" class="text-decoration-none text-dark">
-                                    {{ project.name }}
-                                </a>
-                            </h5>
-                            <span class="badge rounded-pill 
-                                {% if project.status == 'active' %}bg-success
-                                {% elif project.status == 'completed' %}bg-primary
-                                {% else %}bg-warning{% endif %}">
-                                {{ project.status|title }}
-                            </span>
-                        </div>
-                        <!-- Project Actions -->
-                        <div class="dropdown">
-                            <button class="btn btn-icon" data-bs-toggle="dropdown">
-                                <i class="bi bi-three-dots-vertical"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li>
-                                    <a class="dropdown-item" href="{% url 'project_update' project.id %}">
-                                        <i class="bi bi-pencil me-2"></i>Edit
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{% url 'project_detail' project.id %}">
-                                        <i class="bi bi-eye me-2"></i>View Details
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <a class="dropdown-item text-danger" href="{% url 'project_delete' project.id %}">
-                                        <i class="bi bi-trash me-2"></i>Delete
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <!-- Project Info -->
-                    <p class="card-text text-muted mb-3">{{ project.description|truncatechars:100 }}</p>
-                    
-                    <!-- Progress Bar -->
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <small class="text-muted">Progress</small>
-                            <small class="text-muted">{{ project.progress }}%</small>
-                        </div>
-                        <div class="progress" style="height: 6px;">
-                            <div class="progress-bar bg-primary" role="progressbar" 
-                                 style="width: {{ project.progress }}%" 
-                                 aria-valuenow="{{ project.progress }}" 
-                                 aria-valuemin="0" 
-                                 aria-valuemax="100"></div>
-                        </div>
-                    </div>
-
-                    <!-- Project Meta -->
-                    <div class="d-flex justify-content-between align-items-center">
-                        <!-- Team -->
-                        <div class="avatar-group">
-                            {% for member in project.team.all|slice:":3" %}
-                                <div class="avatar" data-bs-toggle="tooltip" title="{{ member.username }}">
-                                    {% if member.profile.avatar %}
-                                        <img src="{{ member.profile.avatar.url }}" alt="{{ member.username }}">
-                                    {% else %}
-                                        <div class="avatar-initial">{{ member.username|first|upper }}</div>
-                                    {% endif %}
-                                </div>
-                            {% endfor %}
-                            {% if project.team.count > 3 %}
-                                <div class="avatar">
-                                    <div class="avatar-initial">+{{ project.team.count|add:"-3" }}</div>
-                                </div>
-                            {% endif %}
-                        </div>
-                        <!-- Due Date -->
-                        <small class="text-muted">
-                            <i class="bi bi-calendar me-1"></i>
-                            Due {{ project.due_date|date:"M d, Y" }}
-                        </small>
-                    </div>
+    <!-- Project Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="glass-card stat-card">
+                <i class="bi bi-folder-fill text-primary"></i>
+                <div class="stat-info">
+                    <h3 class="stat-value">{{ total_projects_count }}</h3>
+                    <p class="stat-label">Total Projects</p>
                 </div>
             </div>
         </div>
-        {% empty %}
-        <div class="col-12 text-center py-5">
-            <div class="empty-state">
+        <div class="col-md-3">
+            <div class="glass-card stat-card">
+                <i class="bi bi-play-fill text-success"></i>
+                <div class="stat-info">
+                    <h3 class="stat-value">{{ active_projects_count }}</h3>
+                    <p class="stat-label">Active Projects</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="glass-card stat-card">
+                <i class="bi bi-people-fill text-info"></i>
+                <div class="stat-info">
+                    <h3 class="stat-value">{{ team_projects|length }}</h3>
+                    <p class="stat-label">Team Projects</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="glass-card stat-card">
+                <i class="bi bi-check2-circle text-success"></i>
+                <div class="stat-info">
+                    <h3 class="stat-value">{{ completion_rate|default:0 }}%</h3>
+                    <p class="stat-label">Completion Rate</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Projects Grid -->
+    <div class="projects-container">
+        <!-- Managed Projects -->
+        {% if managed_projects %}
+        <div class="project-section mb-4">
+            <div class="section-header">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-shield-check text-primary"></i>
+                    <h3 class="h5 mb-0">Projects You Manage</h3>
+                </div>
+                <span class="badge bg-primary">{{ managed_projects|length }}</span>
+            </div>
+            <div class="project-grid">
+                {% for project in managed_projects %}
+                    {% include "projects/includes/project_card.html" with project=project show_actions=True %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Team Projects -->
+        {% if team_projects %}
+        <div class="project-section mb-4">
+            <div class="section-header">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-people text-info"></i>
+                    <h3 class="h5 mb-0">Your Team Projects</h3>
+                </div>
+                <span class="badge bg-info">{{ team_projects|length }}</span>
+            </div>
+            <div class="project-grid">
+                {% for project in team_projects %}
+                    {% include "projects/includes/project_card.html" with project=project %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Assigned Projects -->
+        {% if assigned_projects %}
+        <div class="project-section mb-4">
+            <div class="section-header">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-person-check text-secondary"></i>
+                    <h3 class="h5 mb-0">Projects With Your Tasks</h3>
+                </div>
+                <span class="badge bg-secondary">{{ assigned_projects|length }}</span>
+            </div>
+            <div class="project-grid">
+                {% for project in assigned_projects %}
+                    {% include "projects/includes/project_card.html" with project=project %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Empty State -->
+        {% if not managed_projects and not team_projects and not assigned_projects %}
+        <div class="empty-state">
+            <div class="glass-card text-center p-5">
                 <i class="bi bi-folder-x display-1 text-muted mb-4"></i>
-                <h3 class="text-muted">No Projects Found</h3>
+                <h3>No Projects Found</h3>
                 <p class="text-muted mb-4">Create your first project to get started!</p>
-                <a href="{% url 'project_create' %}" class="btn btn-primary">
+                <a href="{% url 'project_create' %}" class="btn btn-primary hover-translate">
                     <i class="bi bi-plus-lg me-2"></i>Create Project
                 </a>
             </div>
         </div>
-        {% endfor %}
+        {% endif %}
     </div>
 </div>
+
+<!-- Delete Project Modal -->
+{% include "projects/includes/delete_modal.html" %}
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltipTriggerList.forEach(tooltipTriggerEl => {
+        new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Project filtering with debounce
     const searchInput = document.getElementById('projectSearch');
     const statusFilter = document.getElementById('statusFilter');
-    const projectCards = document.querySelectorAll('.project-card');
+    const projectSections = document.querySelectorAll('.project-section');
+    const emptyState = document.querySelector('.empty-state');
 
-    function filterProjects() {
+    const debounce = (func, wait) => {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    };
+
+    const filterProjects = () => {
         const searchTerm = searchInput.value.toLowerCase();
         const statusValue = statusFilter.value;
+        let hasVisibleProjects = false;
 
-        projectCards.forEach(card => {
-            const projectTitle = card.querySelector('.card-title').textContent.toLowerCase();
-            const projectStatus = card.dataset.status;
-            const matchesSearch = projectTitle.includes(searchTerm);
-            const matchesStatus = statusValue === 'all' || projectStatus === statusValue;
+        projectSections.forEach(section => {
+            const cards = section.querySelectorAll('.project-card');
+            let hasVisibleCards = false;
 
-            card.style.display = matchesSearch && matchesStatus ? 'block' : 'none';
+            cards.forEach(card => {
+                const title = card.querySelector('.card-title').textContent.toLowerCase();
+                const status = card.dataset.status;
+                const matchesSearch = title.includes(searchTerm);
+                const matchesStatus = statusValue === 'all' || status === statusValue;
+                const isVisible = matchesSearch && matchesStatus;
+                
+                card.style.display = isVisible ? 'block' : 'none';
+                if (isVisible) {
+                    hasVisibleCards = true;
+                    hasVisibleProjects = true;
+                }
+            });
+
+            section.style.display = hasVisibleCards ? 'block' : 'none';
+        });
+
+        // Toggle empty state
+        if (emptyState) {
+            emptyState.style.display = hasVisibleProjects ? 'none' : 'block';
+        }
+    };
+
+    const debouncedFilter = debounce(filterProjects, 300);
+
+    // Add event listeners
+    searchInput?.addEventListener('input', debouncedFilter);
+    statusFilter?.addEventListener('change', filterProjects);
+
+    // Delete project modal handler
+    const deleteModal = document.getElementById('deleteProjectModal');
+    if (deleteModal) {
+        const deleteForm = deleteModal.querySelector('#deleteProjectForm');
+        
+        deleteModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const projectId = button.dataset.projectId;
+            const projectName = button.dataset.projectName;
+            
+            this.querySelector('#projectNameSpan').textContent = projectName;
+            deleteForm.action = `/projects/${projectId}/delete/`;
+        });
+
+        // Add form submission handler
+        deleteForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalText = submitButton.innerHTML;
+            
+            try {
+                submitButton.disabled = true;
+                submitButton.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Deleting...`;
+
+                const response = await fetch(this.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: new FormData(this)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    window.projectHub.utils.showNotification(
+                        data.message || 'Project deleted successfully',
+                        'success'
+                    );
+
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(deleteModal);
+                    modal?.hide();
+
+                    // Handle redirect
+                    if (data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    } else {
+                        window.location.reload();
+                    }
+                } else {
+                    throw new Error(data.message || 'Failed to delete project');
+                }
+            } catch (error) {
+                console.error('Project deletion error:', error);
+                window.projectHub.utils.showNotification(
+                    error.message || 'Failed to delete project',
+                    'error'
+                );
+            } finally {
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalText;
+            }
         });
     }
 
-    searchInput.addEventListener('input', filterProjects);
-    statusFilter.addEventListener('change', filterProjects);
+    // Animate stats on page load
+    const animateStats = () => {
+        document.querySelectorAll('.stat-value').forEach(stat => {
+            const value = parseInt(stat.textContent);
+            if (!isNaN(value)) {
+                let current = 0;
+                const increment = value / 30;
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= value) {
+                        stat.textContent = value;
+                        clearInterval(timer);
+                    } else {
+                        stat.textContent = Math.round(current);
+                    }
+                }, 30);
+            }
+        });
+    };
 
-    // Initialize tooltips
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
+    animateStats();
 });
 </script>
 {% endblock %}

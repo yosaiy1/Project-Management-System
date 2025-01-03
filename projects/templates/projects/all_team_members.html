@@ -2,7 +2,7 @@
 {% load static %}
 {% load custom_filters %}
 
-{% block title %}Team Members | Project Hub{% endblock %}
+{% block title %}All Team Members{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/all_team_members.css' %}">
@@ -10,277 +10,228 @@
 
 {% block content %}
 <div class="container py-4">
-    <!-- Header Section -->
-    <div class="row mb-4">
-        <div class="col">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h2 class="mb-0">Team Members Overview</h2>
-                    <p class="text-muted mt-2">Manage and monitor your team members across all projects</p>
-                </div>
-                {% if user_is_staff %}
-                <button class="btn btn-primary hover-lift" data-bs-toggle="modal" data-bs-target="#inviteMemberModal">
-                    <i class="bi bi-person-plus me-2"></i>Add New Member
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="gradient-text mb-0">Team Members</h2>
+            <p class="text-muted">Manage all team members across projects</p>
+        </div>
+        <div class="d-flex gap-3">
+            <div class="view-toggle btn-group">
+                <button class="btn btn-outline-primary active" data-view="grid">
+                    <i class="bi bi-grid"></i>
                 </button>
-                {% endif %}
+                <button class="btn btn-outline-primary" data-view="list">
+                    <i class="bi bi-list"></i>
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Teams Section -->
-    {% if teams %}
-        {% for team in teams %}
-        <div class="glass-card mb-4 fade-in">
-            <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center p-4">
-                <div class="d-flex align-items-center">
-                    <i class="bi bi-people-fill text-primary me-2"></i>
-                    <h3 class="h5 mb-0">{{ team.name }}</h3>
+    <!-- Filters -->
+    <div class="glass-card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="search-box">
+                        <i class="bi bi-search"></i>
+                        <input type="search" 
+                               class="form-control" 
+                               placeholder="Search members..."
+                               id="memberSearch">
+                    </div>
                 </div>
-                <div class="d-flex align-items-center gap-3">
-                    <div class="progress-wrapper" style="width: 150px">
-                        <div class="progress" style="height: 6px;">
-                            <div class="progress-bar bg-primary" role="progressbar" 
-                                 style="width: {{ team.completion_rate|default:0 }}%" 
-                                 aria-valuenow="{{ team.completion_rate|default:0 }}" 
-                                 aria-valuemin="0" 
-                                 aria-valuemax="100">
+                <div class="col-md-3">
+                    <select class="form-select" id="teamFilter">
+                        <option value="">All Teams</option>
+                        {% for team in teams %}
+                        <option value="{{ team.id }}">{{ team.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="roleFilter">
+                        <option value="">All Roles</option>
+                        {% for role, label in available_roles %}
+                        <option value="{{ role }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="sortBy">
+                        <option value="name">Name</option>
+                        <option value="role">Role</option>
+                        <option value="activity">Recent Activity</option>
+                        <option value="performance">Performance</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Members Grid/List -->
+    <div id="membersContainer" class="grid-view">
+        {% if members %}
+        <div class="row g-4" id="membersList">
+            {% for member in members %}
+            <div class="col-xl-3 col-lg-4 col-md-6" data-member-id="{{ member.id }}">
+                <div class="member-card glass-card h-100">
+                    <div class="card-body">
+                        <div class="member-header">
+                            <div class="member-avatar">
+                                {% if member.user.profile.avatar %}
+                                <img src="{{ member.user.profile.avatar.url }}" alt="{{ member.user.username }}">
+                                {% else %}
+                                <div class="avatar-placeholder">{{ member.user.username|first|upper }}</div>
+                                {% endif %}
+                                <span class="status-indicator {{ member.user.profile.status }}"></span>
+                            </div>
+                            <div class="member-info">
+                                <h5 class="mb-1">{{ member.user.get_full_name|default:member.user.username }}</h5>
+                                <p class="text-muted mb-0">{{ member.user.email }}</p>
+                            </div>
+                        </div>
+                        <div class="member-body">
+                            <div class="teams-list">
+                                {% for team in member.teams.all %}
+                                <span class="badge bg-primary-subtle text-primary">{{ team.name }}</span>
+                                {% endfor %}
+                            </div>
+                            <div class="performance-stats">
+                                <div class="stat-item">
+                                    <label>Tasks</label>
+                                    <span>{{ member.completed_tasks }}/{{ member.task_count }}</span>
+                                </div>
+                                <div class="stat-item">
+                                    <label>Completion Rate</label>
+                                    <div class="progress">
+                                        <div class="progress-bar" 
+                                             role="progressbar" 
+                                             style="width: {{ member.completion_rate }}%"
+                                             aria-valuenow="{{ member.completion_rate }}"
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100">
+                                            {{ member.completion_rate|floatformat:1 }}%
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="member-footer">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge bg-{{ member.role|role_color }}">{{ member.get_role_display }}</span>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                            data-bs-toggle="dropdown">
+                                        Actions
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'member_detail' member.id %}">
+                                                <i class="bi bi-person-lines-fill me-2"></i>View Profile
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'member_tasks' member.id %}">
+                                                <i class="bi bi-list-check me-2"></i>View Tasks
+                                            </a>
+                                        </li>
+                                        {% if can_manage %}
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <button class="dropdown-item text-primary" 
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#editRoleModal"
+                                                    data-member-id="{{ member.id }}"
+                                                    data-member-name="{{ member.user.username }}"
+                                                    data-current-role="{{ member.role }}">
+                                                <i class="bi bi-pencil me-2"></i>Edit Role
+                                            </button>
+                                        </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <span class="badge bg-primary">{{ team.members.count }} Members</span>
                 </div>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Member</th>
-                                <th>Role</th>
-                                <th>Projects</th>
-                                <th>Tasks</th>
-                                <th>Last Active</th>
-                                {% if user_is_staff or user == team.owner %}
-                                <th class="text-end">Actions</th>
-                                {% endif %}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for member in team.members.all %}
-                            <tr>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        {% if member.user.profile.avatar %}
-                                            <img src="{{ member.user.profile.avatar.url }}" 
-                                                 class="rounded-circle me-2" 
-                                                 width="32" 
-                                                 height="32"
-                                                 alt="{{ member.user.username }}'s avatar">
-                                        {% else %}
-                                            <div class="avatar-placeholder me-2">
-                                                {{ member.user.username|first|upper }}
-                                            </div>
-                                        {% endif %}
-                                        <div>
-                                            <div class="fw-bold">{{ member.user.get_full_name|default:member.user.username }}</div>
-                                            <small class="text-muted">@{{ member.user.username }}</small>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="badge bg-{{ member.role|role_color }}">
-                                        {{ member.get_role_display|default:"Member" }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        {{ member.project_count }}
-                                        {% if member.project_count > 0 %}
-                                        <div class="progress ms-2" style="width: 50px; height: 4px;">
-                                            <div class="progress-bar bg-success" style="width: {{ member.project_completion_rate }}%"></div>
-                                        </div>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        {{ member.task_count }}
-                                        <small class="text-success ms-2">
-                                            ({{ member.completed_tasks_count }} completed)
-                                        </small>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <i class="bi bi-clock-history me-2 text-muted"></i>
-                                        {{ member.user.last_login|timesince }} ago
-                                    </div>
-                                </td>
-                                {% if user_is_staff or user == team.owner %}
-                                <td class="text-end">
-                                    <div class="btn-group">
-                                        <a href="{% url 'member_detail' team.id member.id %}" 
-                                           class="btn btn-sm btn-outline-primary"
-                                           data-bs-toggle="tooltip"
-                                           title="View Details">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
-                                        {% if member.user != team.owner %}
-                                        <button type="button" 
-                                                class="btn btn-sm btn-outline-danger"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#removeMemberModal"
-                                                data-team-id="{{ team.id }}"
-                                                data-member-id="{{ member.id }}"
-                                                data-member-name="{{ member.user.username }}"
-                                                title="Remove Member">
-                                            <i class="bi bi-person-x"></i>
-                                        </button>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                                {% endif %}
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-    {% else %}
+        {% include "projects/includes/pagination.html" with page_obj=members %}
+        {% else %}
         <div class="text-center py-5">
-            <div class="empty-state fade-in">
-                <i class="bi bi-people display-1 text-muted mb-3"></i>
-                <h3 class="text-muted">No Teams Found</h3>
-                <p class="text-muted mb-4">You are not a member of any teams yet.</p>
-                <a href="{% url 'team_create' %}" class="btn btn-primary hover-lift">
-                    <i class="bi bi-plus-lg me-2"></i>Create Team
-                </a>
-            </div>
+            <i class="bi bi-people text-muted display-4"></i>
+            <h4 class="mt-3">No Team Members Found</h4>
+            <p class="text-muted">Try adjusting your search or filters</p>
         </div>
-    {% endif %}
-</div>
-
-<!-- Remove Member Modal -->
-<div class="modal fade" id="removeMemberModal" tabindex="-1" aria-labelledby="removeMemberModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="removeMemberModalLabel">
-                    <i class="bi bi-exclamation-triangle text-danger me-2"></i>
-                    Remove Team Member
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p class="mb-0">Are you sure you want to remove <strong><span id="memberName"></span></strong> from the team?</p>
-                <small class="text-muted">This action cannot be undone.</small>
-            </div>
-            <div class="modal-footer">
-                <form id="removeMemberForm" method="POST">
-                    {% csrf_token %}
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-person-x me-2"></i>Remove Member
-                    </button>
-                </form>
-            </div>
-        </div>
+        {% endif %}
     </div>
 </div>
 
-<!-- Invite Member Modal -->
-<div class="modal fade" id="inviteMemberModal" tabindex="-1" aria-labelledby="inviteMemberModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="inviteMemberModalLabel">
-                    <i class="bi bi-person-plus text-primary me-2"></i>
-                    Invite New Member
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="inviteMemberForm" method="POST">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email Address</label>
-                        <input type="email" class="form-control" id="email" name="email" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="team" class="form-label">Select Team</label>
-                        <select class="form-select" id="team" name="team" required>
-                            {% for team in teams %}
-                                <option value="{{ team.id }}">{{ team.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="role" class="form-label">Role</label>
-                        <select class="form-select" id="role" name="role" required>
-                            <option value="member">Member</option>
-                            <option value="admin">Admin</option>
-                        </select>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" form="inviteMemberForm" class="btn btn-primary">
-                    <i class="bi bi-send me-2"></i>Send Invitation
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+{% include "projects/modals/edit_role.html" %}
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const memberSearch = document.getElementById('memberSearch');
+    const teamFilter = document.getElementById('teamFilter');
+    const roleFilter = document.getElementById('roleFilter');
+    const sortBy = document.getElementById('sortBy');
+    const viewToggles = document.querySelectorAll('.view-toggle button');
+    const membersContainer = document.getElementById('membersContainer');
+
+    // View toggle
+    viewToggles.forEach(toggle => {
+        toggle.addEventListener('click', function() {
+            viewToggles.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            membersContainer.className = this.dataset.view + '-view';
+        });
+    });
+
+    // Search and filters
+    let searchTimer;
+    const filterMembers = () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+            const params = new URLSearchParams({
+                search: memberSearch.value,
+                team: teamFilter.value,
+                role: roleFilter.value,
+                sort: sortBy.value
+            });
+            
+            fetch(`${window.location.pathname}?${params}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('membersList').innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                window.projectHub.utils.showNotification(
+                    'Error loading members',
+                    'error'
+                );
+            });
+        }, 300);
+    };
+
+    [memberSearch, teamFilter, roleFilter, sortBy].forEach(element => {
+        element.addEventListener('change', filterMembers);
+    });
+    memberSearch.addEventListener('input', filterMembers);
+
     // Initialize tooltips
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.forEach(function(tooltipTriggerEl) {
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltipTriggerList.forEach(tooltipTriggerEl => {
         new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
-    // Handle invite form submission
-    const inviteForm = document.getElementById('inviteMemberForm');
-    inviteForm?.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const teamId = this.querySelector('#team').value;
-        this.action = `/teams/${teamId}/invite/`;
-        this.submit();
-    });
-
-    // Remove Member Modal Handler
-    const removeMemberModal = document.getElementById('removeMemberModal');
-    if (removeMemberModal) {
-        removeMemberModal.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const teamId = button.getAttribute('data-team-id');
-            const memberId = button.getAttribute('data-member-id');
-            const memberName = button.getAttribute('data-member-name');
-            
-            const form = document.getElementById('removeMemberForm');
-            form.action = `/teams/${teamId}/members/remove/${memberId}/`;
-            
-            const nameSpan = document.getElementById('memberName');
-            nameSpan.textContent = memberName;
-        });
-    }
-
-    // Form submission handler
-    const forms = document.querySelectorAll('form');
-    forms.forEach(form => {
-        form.addEventListener('submit', function() {
-            const submitButton = this.querySelector('button[type="submit"]');
-            if (submitButton) {
-                submitButton.disabled = true;
-                submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processing...';
-            }
-        });
     });
 });
 </script>

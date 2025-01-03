@@ -106,6 +106,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 AUTHENTICATION_BACKENDS = [
+    'projects.authentication.EmailOrUsernameModelBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
 
@@ -147,6 +148,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Custom user model
 AUTH_USER_MODEL = 'projects.User'
 
+# Session settings
+SESSION_COOKIE_AGE = 1209600  # 2 weeks for remember me
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Unless remember me is checked
+
 # Authentication settings
 LOGIN_URL = 'login'  # Or whatever the name of your login view is
 LOGIN_REDIRECT_URL = 'homepage'
@@ -157,8 +162,11 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'  # Or your SMTP server
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'your-email@gmail.com'  # Replace with your email
-EMAIL_HOST_PASSWORD = 'your-app-password'  # Replace with your app password
+EMAIL_HOST_USER = 'projhub192@gmail.com'  # Replace with your email
+EMAIL_HOST_PASSWORD = 'sbsv mvoy nzzm kkqw'  # Replace with your app password
+
+TEAM_AVATAR_MAX_SIZE = 2 * 1024 * 1024  # 2MB in bytes
+ALLOWED_TEAM_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/gif']
 
 # For development/testing, you can use console backend instead:
 if DEBUG:

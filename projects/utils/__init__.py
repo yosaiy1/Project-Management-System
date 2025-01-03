@@ -8,11 +8,19 @@ from ..models import Project, Task, Team, TeamMember, Notification  # Changed fr
 logger = logging.getLogger(__name__)
 
 def get_user_projects(user):
-    """Get all projects for a user with optimized queries"""
-    return (Project.objects.filter(team__members__user=user)
-            .select_related('team')
-            .distinct()
-            .order_by('-date_created'))
+    """Get all projects accessible to user"""
+    return Project.objects.filter(
+        Q(team__members__user=user) |  # Projects where user is team member
+        Q(team__owner=user) |          # Projects owned by user
+        Q(manager=user) |              # Projects managed by user
+        Q(tasks__assigned_to=user)     # Projects with tasks assigned to user
+    ).distinct().select_related(
+        'team',
+        'manager'
+    ).prefetch_related(
+        'team__members',
+        'tasks'
+    )
 
 def get_user_tasks(user):
     """Get all tasks for a user with optimized queries"""

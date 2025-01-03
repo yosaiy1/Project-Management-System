@@ -1,18 +1,22 @@
-<div class="modal fade" id="editRoleModal" tabindex="-1" aria-labelledby="editRoleModalLabel" aria-hidden="true">
+<!-- Edit Role Modal -->
+<div class="modal fade" id="editRoleModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="editRoleModalLabel">Edit Member Role</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title">Edit Member Role</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form id="editRoleForm" method="POST">
+            <form method="POST" data-ajax>
                 {% csrf_token %}
                 <div class="modal-body">
+                    <p>Update role for <span id="memberNameRole" class="fw-bold"></span></p>
+                    <input type="hidden" name="member_id" value="">
                     <div class="mb-3">
-                        <label for="roleSelect" class="form-label">Select Role</label>
-                        <select class="form-select" id="roleSelect" name="role" required>
-                            <option value="member">Member</option>
-                            <option value="admin">Admin</option>
+                        <label class="form-label">Role*</label>
+                        <select name="role" class="form-select" required>
+                            {% for role, label in available_roles %}
+                            <option value="{{ role }}">{{ label }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                 </div>

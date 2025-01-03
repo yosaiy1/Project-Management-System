@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Progress Tracking{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/progress.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="gradient-text mb-0">Progress Tracking</h2>
+            <p class="text-muted mt-2">Monitor your task completion and performance</p>
+        </div>
+    </div>
+
+    <!-- Progress Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="glass-card stat-card">
+                <i class="bi bi-check2-all text-success"></i>
+                <div class="stat-info">
+                    <h3 class="stat-value" data-stat-value="{{ completion_rate|default:0 }}">{{ completion_rate|default:0 }}%</h3>
+                    <p class="stat-label">Completion Rate</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="glass-card stat-card">
+                <i class="bi bi-clock-history text-warning"></i>
+                <div class="stat-info">
+                    <h3 class="stat-value" data-stat-value="{{ recent_tasks|length }}">{{ recent_tasks|length }}</h3>
+                    <p class="stat-label">Recent Tasks</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="glass-card stat-card">
+                <i class="bi bi-graph-up text-primary"></i>
+                <div class="stat-info">
+                    <h3 class="stat-value">{{ timeline_data|length }}</h3>
+                    <p class="stat-label">Timeline Points</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Charts -->
+    <div class="row g-4">
+        <!-- Completion Timeline -->
+        <div class="col-md-8">
+            <div class="glass-card">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Completion Timeline</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="completionTimeline"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Tasks -->
+        <div class="col-md-4">
+            <div class="glass-card">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Recent Tasks</h5>
+                </div>
+                <div class="card-body">
+                    <div class="recent-tasks-list">
+                        {% for task in recent_tasks %}
+                        <div class="task-item">
+                            <div class="task-info">
+                                <h6 class="task-title">{{ task.title }}</h6>
+                                <small class="text-muted">{{ task.project.name }}</small>
+                            </div>
+                            <span class="badge bg-{{ task.status }}">{{ task.get_status_display }}</span>
+                        </div>
+                        {% empty %}
+                        <div class="text-center text-muted">
+                            <i class="bi bi-inbox display-4"></i>
+                            <p>No recent tasks</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize progress system
+    const progressTracker = {
+        init() {
+            this.setupCharts();
+            window.projectHub?.statsSystem?.animateStats();
+        },
+
+        setupCharts() {
+            const ctx = document.getElementById('completionTimeline').getContext('2d');
+            const timelineData = {{ timeline_data|safe }};
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: timelineData.map(item => item.date),
+                    datasets: [{
+                        label: 'Completion Rate',
+                        data: timelineData.map(item => item.rate),
+                        borderColor: 'rgb(79, 70, 229)',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: value => `${value}%`
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    };
+
+    // Initialize progress tracking
+    try {
+        progressTracker.init();
+    } catch (error) {
+        console.error('Progress tracking initialization error:', error);
+        window.projectHub?.utils?.showNotification(
+            'Failed to initialize progress tracking',
+            'error'
+        );
+    }
+});
+</script>
+{% endblock %}

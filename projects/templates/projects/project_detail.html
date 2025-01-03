@@ -20,12 +20,11 @@
                     <a href="{% url 'project_update' project.id %}" class="btn btn-outline-primary hover-translate">
                         <i class="bi bi-pencil me-2"></i>Edit Project
                     </a>
-                    <button type="button" 
-                            class="btn btn-outline-danger hover-translate"
-                            data-bs-toggle="modal" 
-                            data-bs-target="#deleteProjectModal">
-                        <i class="bi bi-trash me-2"></i>Delete Project
-                    </button>
+                    {% if user.is_project_manager or user == project.team.owner %}
+                    <a href="{% url 'create_team_member' project.id %}" class="btn btn-outline-success hover-translate">
+                        <i class="bi bi-person-plus me-2"></i>Add Team Member
+                    </a>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>
@@ -33,199 +32,81 @@
         </div>
     </div>
 
-    <!-- Project Stats -->
-    <div class="row g-4 mb-4">
-        <div class="col-md-3 col-sm-6">
-            <div class="glass-card h-100">
-                <div class="card-body text-center">
-                    <i class="bi bi-calendar-event display-6 text-primary mb-3"></i>
-                    <h3 class="h2 mb-2">{{ project.start_date|date:"M d, Y" }}</h3>
-                    <p class="text-muted mb-0">Start Date</p>
-                </div>
-            </div>
+    <!-- Team Members Section -->
+    {% if can_view_members %}
+    <div class="glass-card mb-4">
+        <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center">
+            <h3 class="h5 mb-0">Team Members</h3>
+            <span class="badge bg-primary">{{ project.team.members.count }}</span>
         </div>
-        <div class="col-md-3 col-sm-6">
-            <div class="glass-card h-100">
-                <div class="card-body text-center">
-                    <i class="bi bi-calendar-check display-6 text-info mb-3"></i>
-                    <h3 class="h2 mb-2">{{ project.end_date|date:"M d, Y" }}</h3>
-                    <p class="text-muted mb-0">Due Date</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 col-sm-6">
-            <div class="glass-card h-100">
-                <div class="card-body text-center">
-                    <i class="bi bi-list-check display-6 text-success mb-3"></i>
-                    <h3 class="h2 mb-2">{{ tasks|length }}</h3>
-                    <p class="text-muted mb-0">Total Tasks</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 col-sm-6">
-            <div class="glass-card h-100">
-                <div class="card-body text-center">
-                    <i class="bi bi-check2-circle display-6 text-warning mb-3"></i>
-                    <h3 class="h2 mb-2">{{ tasks|completed_tasks_count }}</h3>
-                    <p class="text-muted mb-0">Completed Tasks</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Tasks Section -->
-    <div class="glass-card">
-        <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center py-3">
-            <h3 class="h5 mb-0">Project Tasks</h3>
-            <a href="{% url 'project_task_create' project.id %}" class="btn btn-primary btn-sm hover-translate">
-                <i class="bi bi-plus-lg me-2"></i>Add Task
-            </a>
-        </div>
-        <div class="card-body p-0">
-            {% if tasks %}
+        <div class="card-body">
+            {% if project.team.members.exists %}
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table align-middle mb-0">
                     <thead>
                         <tr>
-                            <th>Title</th>
-                            <th>Assigned To</th>
-                            <th>Due Date</th>
-                            <th>Status</th>
-                            <th class="text-end">Actions</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Tasks</th>
+                            {% if can_manage %}
+                            <th>Actions</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
-                        {% for task in tasks %}
+                        {% for member in project.team.members.all %}
                         <tr>
-                            <td>{{ task.title }}</td>
                             <td>
-                                <div class="d-flex align-items-center gap-2">
-                                    {% if task.assigned_to.profile.avatar %}
-                                        <img src="{{ task.assigned_to.profile.avatar.url }}" 
-                                             alt="{{ task.assigned_to.username }}"
-                                             class="rounded-circle"
-                                             width="32" height="32">
+                                <div class="d-flex align-items-center">
+                                    {% if member.user.profile.profile_picture %}
+                                        <img src="{{ member.user.profile.profile_picture.url }}" class="rounded-circle me-2" width="32">
                                     {% else %}
-                                        <div class="avatar-placeholder rounded-circle"
-                                             style="width: 32px; height: 32px;">
-                                            {{ task.assigned_to.username|slice:":1"|upper }}
-                                        </div>
+                                        <div class="avatar-placeholder me-2">{{ member.user.username|first|upper }}</div>
                                     {% endif %}
-                                    <span>{{ task.assigned_to.username }}</span>
+                                    {{ member.user.get_full_name|default:member.user.username }}
                                 </div>
                             </td>
-                            <td>{{ task.due_date|date:"M d, Y" }}</td>
+                            <td>{{ member.user.email }}</td>
+                            <td><span class="badge bg-{{ member.role|role_color }}">{{ member.get_role_display }}</span></td>
                             <td>
-                                <span class="badge bg-{{ task.status|task_status_color }}">
-                                    {{ task.get_status_display }}
-                                </span>
+                                <div class="d-flex align-items-center">
+                                    {{ member.user.assigned_tasks.count }}
+                                    <small class="text-success ms-2">({{ member.completed_tasks_count }} done)</small>
+                                </div>
                             </td>
-                            <td class="text-end">
+                            {% if can_manage and member.user != project.team.owner %}
+                            <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{% url 'task_detail' project.id task.id %}" 
-                                       class="btn btn-outline-primary hover-translate">
+                                    <a href="{% url 'member_detail' project.team.id member.id %}" 
+                                       class="btn btn-outline-primary" 
+                                       title="View Details">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    <a href="{% url 'task_update' project.id task.id %}" 
-                                       class="btn btn-outline-info hover-translate">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
                                 </div>
                             </td>
+                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
             {% else %}
-            <div class="text-center py-5">
-                <i class="bi bi-list-check display-4 text-muted mb-3"></i>
-                <p class="text-muted mb-3">No tasks available for this project</p>
-                <a href="{% url 'project_task_create' project.id %}" 
-                   class="btn btn-primary hover-translate">
-                    <i class="bi bi-plus-lg me-2"></i>Add First Task
-                </a>
-            </div>
+            <p class="text-center text-muted my-4">No team members yet</p>
             {% endif %}
         </div>
     </div>
-
-    <!-- Back Button -->
-    <div class="text-center mt-4">
-        <a href="{% url 'project_list' %}" class="btn btn-secondary hover-translate">
-            <i class="bi bi-arrow-left me-2"></i>Back to Projects
-        </a>
-    </div>
-</div>
-
-<!-- Delete Project Modal -->
-<div class="modal fade" id="deleteProjectModal" tabindex="-1" aria-labelledby="deleteProjectModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content glass-card border-0">
-            <div class="modal-header border-bottom">
-                <h5 class="modal-title" id="deleteProjectModalLabel">
-                    <i class="bi bi-exclamation-triangle text-danger me-2"></i>Delete Project
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="alert alert-danger bg-danger bg-opacity-10 border-0">
-                    <p class="mb-2">Are you sure you want to delete <strong>{{ project.name }}</strong>?</p>
-                    <small class="text-danger">This action cannot be undone. All tasks and files will be deleted.</small>
-                </div>
-            </div>
-            <div class="modal-footer border-top">
-                <form id="deleteProjectForm" method="POST" action="{% url 'project_delete' project.id %}" data-ajax>
-                    {% csrf_token %}
-                    <button type="button" class="btn btn-secondary hover-translate" data-bs-dismiss="modal">
-                        <i class="bi bi-x-lg me-2"></i>Cancel
-                    </button>
-                    <button type="submit" class="btn btn-danger hover-translate">
-                        <i class="bi bi-trash me-2"></i>Delete Project
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const deleteForm = document.getElementById('deleteProjectForm');
-    
-    deleteForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const submitButton = this.querySelector('button[type="submit"]');
-        const originalText = submitButton.innerHTML;
-        submitButton.disabled = true;
-        submitButton.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Deleting...`;
-        
-        fetch(this.action, {
-            method: 'POST',
-            body: new FormData(this),
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast('success', 'Project deleted successfully');
-                setTimeout(() => window.location.href = "{% url 'project_list' %}", 1000);
-            } else {
-                showToast('error', data.message || 'Error deleting project');
-                submitButton.disabled = false;
-                submitButton.innerHTML = originalText;
-            }
-        })
-        .catch(error => {
-            showToast('error', 'Error deleting project');
-            submitButton.disabled = false;
-            submitButton.innerHTML = originalText;
-        });
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function(tooltipTriggerEl) {
+        new bootstrap.Tooltip(tooltipTriggerEl);
     });
 });
 </script>

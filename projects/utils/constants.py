@@ -33,6 +33,8 @@ MSG_PASSWORD_CHANGE_SUCCESS = "Your password was successfully updated!"
 MSG_INVALID_FILE = "Invalid file type or size"
 MSG_FILE_UPLOAD_ERROR = "Error uploading file"
 MSG_AVATAR_UPDATE_ERROR = "Error updating profile picture"
+MSG_TEAM_MEMBER_CREATED = "Team member account created successfully."
+MSG_TEAM_MEMBER_EXISTS = "A user with this email already exists."
 
 # Project statuses
 PROJECT_STATUS_ACTIVE = 'active'

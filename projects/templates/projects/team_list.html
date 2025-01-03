@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}Teams{% endblock %}
 
@@ -8,67 +9,122 @@
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col">
-            <div class="d-flex justify-content-between align-items-center">
-                <h2>Teams</h2>
-                <a href="{% url 'team_create' %}" class="btn btn-primary">
-                    <i class="bi bi-plus-lg"></i> Create Team
-                </a>
-            </div>
+<div class="container py-4">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="gradient-text mb-0">Teams</h2>
+            <p class="text-muted">Manage and collaborate with your teams</p>
         </div>
+        <a href="{% url 'team_create' %}" class="btn btn-primary hover-translate">
+            <i class="bi bi-plus-lg me-2"></i>Create Team
+        </a>
     </div>
 
-    {% if messages %}
-    <div class="messages mb-4">
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    <!-- Teams Grid -->
+    <div class="row g-4">
         {% for team in teams %}
-        <div class="col">
-            <div class="card h-100 shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">{{ team.name }}</h5>
-                    <p class="card-text text-muted">{{ team.description|truncatewords:20 }}</p>
-                    <div class="d-flex align-items-center mb-3">
-                        <small class="text-muted me-3">
-                            <i class="bi bi-people"></i> {{ team.members.count }} members
-                        </small>
-                        <small class="text-muted">
-                            <i class="bi bi-folder"></i> {{ team.projects.count }} projects
-                        </small>
+        <div class="col-md-6 col-lg-4">
+            <div class="glass-card team-card h-100">
+                <div class="card-body d-flex flex-column">
+                    <!-- Team Header -->
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="team-avatar">
+                            {% if team.avatar %}
+                                <img src="{{ team.avatar.url }}" alt="{{ team.name }}" class="rounded">
+                            {% else %}
+                                <div class="avatar-placeholder">{{ team.name|first|upper }}</div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h3 class="card-title h5 mb-1">{{ team.name }}</h3>
+                            <small class="text-muted">Created {{ team.created_at|timesince }} ago</small>
+                        </div>
                     </div>
-                    <div class="d-grid gap-2">
-                        <a href="{% url 'team_detail' team.id %}" class="btn btn-outline-primary">View Details</a>
-                        {% if request.user == team.owner %}
-                        <a href="{% url 'manage_team_members' team.id %}" class="btn btn-outline-secondary">
-                            Manage Members
-                        </a>
-                        {% endif %}
+
+                    <!-- Team Description -->
+                    <p class="card-text text-muted mb-3">{{ team.description|truncatewords:20 }}</p>
+
+                    <!-- Team Stats -->
+                    <div class="team-stats mb-3">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="stat-item">
+                                    <i class="bi bi-people text-primary"></i>
+                                    <span>{{ team.members.count }} Members</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-item">
+                                    <i class="bi bi-folder text-info"></i>
+                                    <span>{{ team.projects.count }} Projects</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="progress-wrapper mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <small class="text-muted">Overall Progress</small>
+                            <small class="text-muted">{{ team.progress|default:0 }}%</small>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-{{ team.team_progress|progress_color }}" 
+                                 role="progressbar" 
+                                 style="width: {{ team.team_progress|default:0 }}%"
+                                 aria-valuenow="{{ team.team_progress|default:0 }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="mt-auto">
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'team_detail' team.id %}" class="btn btn-outline-primary hover-translate">
+                                <i class="bi bi-arrow-right me-2"></i>View Details
+                            </a>
+                            {% if request.user == team.owner %}
+                            <a href="{% url 'manage_team_members' team.id %}" class="btn btn-outline-secondary hover-translate">
+                                <i class="bi bi-people-fill me-2"></i>Manage Members
+                            </a>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
         {% empty %}
+        <!-- Empty State -->
         <div class="col-12">
-            <div class="text-center p-5">
+            <div class="glass-card text-center p-5">
                 <i class="bi bi-people display-1 text-muted mb-3"></i>
                 <h3>No Teams Found</h3>
-                <p class="text-muted">Create a team to start collaborating with others.</p>
-                <a href="{% url 'team_create' %}" class="btn btn-primary">
-                    <i class="bi bi-plus-lg"></i> Create Team
+                <p class="text-muted mb-4">Create a team to start collaborating with others.</p>
+                <a href="{% url 'team_create' %}" class="btn btn-primary hover-translate">
+                    <i class="bi bi-plus-lg me-2"></i>Create Team
                 </a>
             </div>
         </div>
         {% endfor %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltipTriggerList.forEach(tooltipTriggerEl => {
+        new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Animate progress bars
+    const progressBars = document.querySelectorAll('.progress-bar');
+    window.projectHub?.progressSystem?.observeProgressBars(progressBars);
+});
+</script>
 {% endblock %}

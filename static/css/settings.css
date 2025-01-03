@@ -1,0 +1,234 @@
+/* Settings Page Variables */
+:root {
+    --avatar-size: 100px;
+    --card-spacing: 1.5rem;
+    --transition-speed: 0.3s;
+}
+
+/* Settings Container */
+.settings-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-lg) 0;
+}
+
+/* Page Header */
+.gradient-text {
+    font-size: 2rem;
+    font-weight: 700;
+    background: var(--gradient-1);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Card Styles */
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius);
+    transition: all var(--transition-speed) ease;
+}
+
+.glass-card:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+.card-body {
+    padding: var(--card-spacing);
+}
+
+.card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Avatar Upload Section */
+.avatar-upload {
+    margin: 2rem 0;
+}
+
+.avatar-preview {
+    width: var(--avatar-size);
+    height: var(--avatar-size);
+    position: relative;
+    border: 2px solid var(--glass-border);
+    overflow: hidden;
+}
+
+.avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    background: var(--primary-light);
+    color: var(--primary);
+    font-size: 2rem;
+    font-weight: 600;
+}
+
+.upload-controls {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+/* Form Controls */
+.form-label {
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.form-control {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius);
+    padding: 0.75rem 1rem;
+    color: var(--text-primary);
+    transition: all var(--transition-speed) ease;
+}
+
+.form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 0.25rem var(--primary-light);
+}
+
+.input-group .btn {
+    border-top-right-radius: var(--border-radius);
+    border-bottom-right-radius: var(--border-radius);
+}
+
+/* Theme Options */
+.theme-options {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.theme-options .btn {
+    flex: 1;
+    min-width: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    transition: all var(--transition-speed) ease;
+}
+
+.theme-options .btn.active {
+    background: var(--primary);
+    color: white;
+}
+
+/* Danger Zone */
+.border-danger {
+    border: 1px solid var(--danger) !important;
+}
+
+.text-danger {
+    color: var(--danger) !important;
+}
+
+/* Delete Account Modal */
+.modal-content.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--blur));
+    border: none;
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--border-color);
+    padding: var(--spacing-md) var(--card-spacing);
+}
+
+.modal-body {
+    padding: var(--card-spacing);
+}
+
+.modal-footer {
+    border-top: 1px solid var(--border-color);
+    padding: var(--spacing-md) var(--card-spacing);
+    gap: var(--spacing-sm);
+}
+
+.alert.bg-danger.bg-opacity-10 {
+    background: rgba(239, 68, 68, 0.1) !important;
+    border-left: 4px solid var(--danger);
+    border-radius: var(--border-radius);
+}
+
+/* Loading States */
+.btn[disabled] {
+    position: relative;
+    pointer-events: none;
+}
+
+.btn[disabled] .spinner-border {
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.5rem;
+}
+
+/* Hover Effects */
+.hover-translate {
+    transition: transform var(--transition-speed) ease;
+}
+
+.hover-translate:hover {
+    transform: translateY(-2px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .gradient-text {
+        font-size: 1.75rem;
+    }
+
+    .theme-options {
+        flex-direction: column;
+    }
+
+    .theme-options .btn {
+        width: 100%;
+    }
+
+    .card-body {
+        padding: var(--spacing-md);
+    }
+
+    .modal-dialog {
+        margin: var(--spacing-sm);
+    }
+
+    .modal-footer {
+        flex-direction: column-reverse;
+    }
+
+    .modal-footer .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.glass-card {
+    animation: fadeIn 0.3s ease-out forwards;
+}

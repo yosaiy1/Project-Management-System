@@ -6,10 +6,6 @@
     <meta name="description" content="Login to Project Hub - Project Management System">
     <title>Login | Project Hub</title>
     
-    <!-- Preload critical assets -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    
     <!-- Styles -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -19,7 +15,6 @@
 </head>
 <body>
     <div class="login-page">
-        <!-- Animated background -->
         <div class="background-shapes"></div>
         
         <div class="login-container">
@@ -47,41 +42,45 @@
                             </div>
                         {% endif %}
 
-                        <form method="POST" class="needs-validation" novalidate>
+                        <form method="post" action="{% url 'login' %}" class="needs-validation" novalidate id="loginForm">
                             {% csrf_token %}
                             
-                            <!-- Username -->
+                            <!-- Username/Email -->
                             <div class="form-group mb-3">
-                                <label for="username" class="form-label">Username</label>
+                                <label for="id_username" class="form-label">Username or Email</label>
                                 <div class="input-group">
                                     <span class="input-group-text">
                                         <i class="bi bi-person"></i>
                                     </span>
-                                    <input type="text" 
-                                           id="username"
-                                           name="username" 
-                                           class="form-control" 
-                                           placeholder="Enter your username"
-                                           required>
+                                    {{ form.username }}
+                                    <div class="invalid-feedback">
+                                        {% if form.username.errors %}
+                                            {{ form.username.errors|join:", " }}
+                                        {% else %}
+                                            Please enter your username or email.
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Password -->
                             <div class="form-group mb-3">
-                                <label for="password" class="form-label">Password</label>
+                                <label for="id_password" class="form-label">Password</label>
                                 <div class="input-group">
                                     <span class="input-group-text">
                                         <i class="bi bi-lock"></i>
                                     </span>
-                                    <input type="password"
-                                           id="password"
-                                           name="password" 
-                                           class="form-control" 
-                                           placeholder="Enter your password"
-                                           required>
+                                    {{ form.password }}
                                     <button class="btn btn-light" type="button" id="togglePassword">
                                         <i class="bi bi-eye"></i>
                                     </button>
+                                    <div class="invalid-feedback">
+                                        {% if form.password.errors %}
+                                            {{ form.password.errors|join:", " }}
+                                        {% else %}
+                                            Please enter your password.
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
 
@@ -97,18 +96,22 @@
                             </div>
 
                             <!-- Login Button -->
-                            <button type="submit" class="btn btn-primary w-100">
+                            <button type="submit" class="btn btn-primary w-100" id="loginButton">
                                 <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
                             </button>
+
+                            <!-- Register Link -->
+                            <div class="text-center mt-4">
+                                <span class="text-muted">Don't have an account?</span>
+                                <a href="{% url 'register' %}" class="register-link ms-2">Register</a>
+                            </div>
                         </form>
 
-                        <!-- Register Link -->
-                        <p class="text-center mt-4 mb-0">
-                            Don't have an account? 
-                            <a href="{% url 'register' %}" class="register-link">
-                                Sign up
-                            </a>
-                        </p>
+                        <!-- Help Text -->
+                        <div class="alert alert-info mt-4" role="alert">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <small>Team members: Contact your project manager for account creation.</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -117,29 +120,6 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Password Toggle
-            const togglePassword = document.querySelector('#togglePassword');
-            const password = document.querySelector('#password');
-
-            togglePassword?.addEventListener('click', function() {
-                const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
-                password.setAttribute('type', type);
-                this.querySelector('i').classList.toggle('bi-eye');
-                this.querySelector('i').classList.toggle('bi-eye-slash');
-            });
-
-            // Form Validation
-            const form = document.querySelector('form');
-            form?.addEventListener('submit', function(event) {
-                if (!form.checkValidity()) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                }
-                form.classList.add('was-validated');
-            });
-        });
-    </script>
+    <script src="{% static 'js/login.js' %}"></script>
 </body>
 </html>

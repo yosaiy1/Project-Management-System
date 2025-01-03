@@ -1,0 +1,49 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/delete_modal.css' %}">
+
+<div class="modal fade" id="deleteProjectModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle text-danger me-2"></i>
+                    Delete Project
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert bg-danger bg-opacity-10 border-0">
+                    <p class="mb-2">Are you sure you want to delete <strong id="projectNameSpan"></strong>?</p>
+                    <small class="text-danger">This action cannot be undone. All tasks and files associated with this project will be permanently deleted.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <form id="deleteProjectForm" method="POST">
+                    {% csrf_token %}
+                    <button type="button" class="btn btn-secondary hover-translate" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-danger hover-translate ms-2">
+                        <i class="bi bi-trash me-2"></i>Delete Project
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteModal = document.getElementById('deleteProjectModal');
+    if (deleteModal) {
+        deleteModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const projectId = button.dataset.projectId;
+            const projectName = button.dataset.projectName;
+            
+            this.querySelector('#projectNameSpan').textContent = projectName;
+            this.querySelector('#deleteProjectForm').action = `/projects/${projectId}/delete/`;
+        });
+    }
+});
+</script>

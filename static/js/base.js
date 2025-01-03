@@ -771,46 +771,63 @@ const taskSystem = {
         const taskId = evt.item.dataset.id;
         const newStatus = evt.to.dataset.status;
         const oldStatus = evt.from.dataset.status;
-
+    
         // Don't make API call if status hasn't changed
         if (newStatus === oldStatus) return;
         
         try {
-            // Use the correct URL from urls.py
+            // Update URL to match Django URL pattern
             const response = await fetch(`/tasks/status/${taskId}/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': utils.getCookie('csrftoken')
+                    'X-CSRFToken': utils.getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: JSON.stringify({ status: newStatus })
+                body: JSON.stringify({ 
+                    status: newStatus,
+                    old_status: oldStatus
+                })
             });
-
+    
             if (!response.ok) {
-                throw new Error('Failed to update task status');
+                const data = await response.json();
+                throw new Error(data.message || 'Failed to update task status');
             }
-
+    
             const data = await response.json();
-            if (data.status === 'success') {
-                utils.showNotification(`Task moved to ${newStatus}`, 'success');
+            
+            if (data.success) {
+                utils.showNotification(data.message || `Task moved to ${newStatus}`, 'success');
                 this.updateTaskCounts();
+                
+                // Update completion rate if provided
+                if (data.completion_rate !== undefined) {
+                    const completionElement = document.querySelector('[data-stat="completion"]');
+                    if (completionElement) {
+                        completionElement.textContent = `${data.completion_rate}%`;
+                    }
+                }
             } else {
-                throw new Error(data.message || 'Update failed');
+                throw new Error(data.message || 'Failed to update task status');
             }
         } catch (error) {
             console.error('Task move error:', error);
-            utils.showNotification(error.message, 'error');
+            utils.showNotification(error.message || 'Failed to update task status', 'error');
             this.revertTaskPosition(evt);
         }
     },
-
+    
     revertTaskPosition(evt) {
         if (!evt.item || evt.oldIndex === undefined) return;
-        const list = evt.from; // Use from instead of parentNode
+        
+        const list = evt.from;
         const referenceNode = evt.oldIndex < evt.newIndex 
             ? list.children[evt.oldIndex] 
             : list.children[evt.oldIndex + 1];
+            
         list.insertBefore(evt.item, referenceNode);
+        this.updateTaskCounts(); // Update counts after revert
     },
 
     updateTaskCounts() {
@@ -862,7 +879,9 @@ const formSystem = {
         ajaxForm: 'form[data-ajax]',
         validateForm: 'form[data-validate]',
         fileInput: 'input[type="file"]',
-        preview: '[data-preview-for]'
+        preview: '[data-preview-for]',
+        submitButton: 'button[type="submit"]',
+        modal: '.modal'
     },
 
     state: {
@@ -878,15 +897,25 @@ const formSystem = {
         this.setupFileUploads();
         this.setupAjaxForms();
         this.setupFormResets();
+        this.setupDynamicValidation();
     },
 
-    setupAjaxForms() {
-        document.querySelectorAll(this.selectors.ajaxForm).forEach(form => {
-            // Initialize form state
-            if (!form.id) form.id = `form-${Date.now()}`;
-            this.state.forms.set(form.id, { isSubmitting: false });
+    setupDynamicValidation() {
+        document.querySelectorAll('form').forEach(form => {
+            const startDate = form.querySelector('[name="start_date"]');
+            const endDate = form.querySelector('[name="end_date"]');
             
-            form.addEventListener('submit', this.handleAjaxSubmit.bind(this));
+            if (startDate && endDate) {
+                [startDate, endDate].forEach(field => {
+                    field.addEventListener('change', () => {
+                        if (startDate.value && endDate.value) {
+                            const isValid = new Date(startDate.value) <= new Date(endDate.value);
+                            endDate.setCustomValidity(isValid ? '' : 'End date must be after start date');
+                            this.validateField(endDate);
+                        }
+                    });
+                });
+            }
         });
     },
 
@@ -896,7 +925,12 @@ const formSystem = {
             this.state.forms.set(form.id, { isSubmitting: false });
             
             this.setupFieldValidation(form);
-            form.addEventListener('submit', this.validateForm.bind(this));
+            form.addEventListener('submit', (e) => {
+                if (!this.validateForm(form)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            });
         });
     },
 
@@ -904,6 +938,9 @@ const formSystem = {
         form.querySelectorAll('input, select, textarea').forEach(field => {
             ['input', 'blur'].forEach(event => {
                 field.addEventListener(event, () => this.validateField(field));
+                field.addEventListener('focus', () => {
+                    field.classList.remove('is-valid', 'is-invalid');
+                });
             });
         });
     },
@@ -917,25 +954,17 @@ const formSystem = {
         if (feedback?.classList.contains('invalid-feedback')) {
             feedback.textContent = field.validationMessage;
         }
-
+        
         return isValid;
     },
 
-    validateForm(e) {
-        const form = e.target;
+    validateForm(form) {
         let isValid = true;
-
         form.querySelectorAll('input, select, textarea').forEach(field => {
             if (!this.validateField(field)) {
                 isValid = false;
             }
         });
-
-        if (!isValid) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-
         form.classList.add('was-validated');
         return isValid;
     },
@@ -1005,35 +1034,18 @@ const formSystem = {
         }
     },
 
-    resetForm(form) {
-        if (!form) return;
-        
-        // Reset form fields
-        form.reset();
-        
-        // Remove validation classes
-        form.classList.remove('was-validated');
-        form.querySelectorAll('.is-invalid, .is-valid').forEach(field => {
-            field.classList.remove('is-invalid', 'is-valid');
+    setupAjaxForms() {
+        document.querySelectorAll(this.selectors.ajaxForm).forEach(form => {
+            if (!form.id) form.id = `form-${Date.now()}`;
+            
+            const submitButton = form.querySelector(this.selectors.submitButton);
+            if (submitButton) {
+                submitButton.dataset.originalText = submitButton.innerHTML;
+            }
+            
+            this.state.forms.set(form.id, { isSubmitting: false });
+            form.addEventListener('submit', this.handleAjaxSubmit.bind(this));
         });
-        
-        // Clear error messages
-        form.querySelectorAll('.invalid-feedback').forEach(feedback => {
-            feedback.textContent = '';
-        });
-        
-        // Reset file previews
-        form.querySelectorAll('[data-preview-for]').forEach(preview => {
-            preview.classList.add('d-none');
-            preview.src = '';
-        });
-
-        // Reset submit button
-        const submitButton = form.querySelector('button[type="submit"]');
-        if (submitButton) {
-            submitButton.disabled = false;
-            submitButton.innerHTML = submitButton.dataset.originalText || 'Save';
-        }
     },
 
     async handleAjaxSubmit(e) {
@@ -1041,114 +1053,132 @@ const formSystem = {
         const form = e.target;
         const formState = this.state.forms.get(form.id);
         
-        if (formState?.isSubmitting) return;
-        
-        const submitButton = form.querySelector('button[type="submit"]');
-        if (!submitButton?.dataset.originalText) {
-            submitButton.dataset.originalText = submitButton.innerHTML;
+        if (formState?.isSubmitting || !form.checkValidity()) {
+            form.classList.add('was-validated');
+            return;
         }
         
+        const submitButton = form.querySelector(this.selectors.submitButton);
+        const originalText = submitButton?.innerHTML;
+        
         try {
-            if (!this.validateForm({ target: form })) {
-                throw new Error('Please fix the validation errors');
-            }
-    
             formState.isSubmitting = true;
-            form.classList.add('is-submitting');
             
             if (submitButton) {
                 submitButton.disabled = true;
-                submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+                submitButton.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${submitButton.dataset.loadingText || 'Processing...'}`;
             }
     
-            const formData = new FormData(form);
-            
-            const response = await fetch(form.action, {
-                method: form.method || 'POST',
+            const response = await fetch(form.action || window.location.href, {
+                method: 'POST',
                 headers: {
-                    'X-CSRFToken': utils.getCookie('csrftoken'),
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
                 },
-                body: formData
+                body: new FormData(form)
             });
     
-            // Special handling for notification clearing
-            if (form.action.includes('clear_notifications')) {
-                const data = await response.json();
-                if (data.status === 'success') {
-                    window.projectHub?.notificationSystem?.updateNotificationsList?.([]);
-                    window.projectHub?.notificationSystem?.updateUnreadCount?.(0);
-                    utils.showNotification(data.message || 'Notifications cleared', 'success');
+            const data = await response.json();
+    
+            if (response.ok && (data.success || data.status === 'success')) {
+                // Show success message
+                window.projectHub.utils.showNotification(
+                    data.message || 'Changes saved successfully', 
+                    'success'
+                );
+    
+                // Handle redirect
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
                     return;
                 }
-                throw new Error(data.message || 'Failed to clear notifications');
-            }
     
-            // Handle project/task deletion
-            if (form.action.includes('delete')) {
-                const data = await response.json();
-                if (data.success) {
-                    utils.showNotification(data.message || 'Deleted successfully', 'success');
-                    if (data.redirect_url) {
-                        setTimeout(() => window.location.href = data.redirect_url, 1000);
-                    } else {
-                        window.location.href = response.url || '/';
-                    }
-                    return;
+                // Handle modal
+                const modal = form.closest(this.selectors.modal);
+                if (modal) {
+                    const bsModal = bootstrap.Modal.getInstance(modal);
+                    bsModal?.hide();
                 }
-                throw new Error(data.message || 'Deletion failed');
-            }
     
-            // Handle other responses
-            const contentType = response.headers.get('content-type');
-            if (contentType?.includes('application/json')) {
-                const data = await response.json();
-                
-                if (data.success || data.status === 'success') {
-                    utils.showNotification(data.message || 'Success', 'success');
-                    if (data.redirect_url) {
-                        setTimeout(() => window.location.href = data.redirect_url, 1000);
-                    } else {
-                        this.resetForm(form);
-                    }
-                } else {
-                    if (data.errors) {
-                        this.handleValidationErrors(form, data.errors);
-                    }
-                    throw new Error(data.message || 'Form submission failed');
+                // Reset form
+                this.resetForm(form);
+    
+                // Reload if needed
+                if (data.reload) {
+                    window.location.reload();
                 }
             } else {
-                // Handle non-JSON responses
-                const text = await response.text();
-                
-                if (response.ok) {
-                    if (response.redirected || response.url !== window.location.href) {
-                        window.location.href = response.url;
-                        return;
-                    }
-                    utils.showNotification('Success', 'success');
-                    this.resetForm(form);
-                } else {
-                    // Try to extract form with errors
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(text, 'text/html');
-                    const newForm = doc.querySelector('form');
-                    if (newForm) {
-                        form.innerHTML = newForm.innerHTML;
-                    }
-                    throw new Error('Form submission failed');
+                // Handle validation errors if present
+                if (data.errors) {
+                    this.handleValidationErrors(form, data.errors);
+                    throw new Error(Object.values(data.errors)[0]);
                 }
+    
+                // Try to parse error message from array if needed
+                let errorMessage = data.message;
+                if (Array.isArray(data.message)) {
+                    errorMessage = data.message[0];
+                }
+                throw new Error(errorMessage || 'Operation failed');
             }
         } catch (error) {
             console.error('Form submission error:', error);
-            utils.showNotification(error.message, 'error');
+            
+            if (error.response?.status === 400) {
+                try {
+                    const errorData = await error.response.json();
+                    if (errorData.errors) {
+                        this.handleValidationErrors(form, errorData.errors);
+                    }
+                    window.projectHub.utils.showNotification(
+                        errorData.message || 'Validation error occurred', 
+                        'error'
+                    );
+                } catch (jsonError) {
+                    window.projectHub.utils.showNotification(
+                        'Validation error occurred', 
+                        'error'
+                    );
+                }
+            } else {
+                window.projectHub.utils.showNotification(
+                    error.message || 'An error occurred while saving', 
+                    'error'
+                );
+            }
         } finally {
             if (submitButton) {
                 submitButton.disabled = false;
-                submitButton.innerHTML = submitButton.dataset.originalText;
+                submitButton.innerHTML = originalText;
             }
-            form.classList.remove('is-submitting');
             formState.isSubmitting = false;
+        }
+    },
+
+    resetForm(form) {
+        if (!form) return;
+        
+        form.reset();
+        form.classList.remove('was-validated');
+        
+        form.querySelectorAll('.is-invalid, .is-valid').forEach(field => {
+            field.classList.remove('is-invalid', 'is-valid');
+        });
+        
+        form.querySelectorAll('.invalid-feedback').forEach(feedback => {
+            feedback.textContent = '';
+        });
+        
+        form.querySelectorAll(this.selectors.preview).forEach(preview => {
+            preview.classList.add('d-none');
+            preview.src = '';
+        });
+
+        const submitButton = form.querySelector(this.selectors.submitButton);
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.innerHTML = submitButton.dataset.originalText || 'Save';
         }
     },
 
@@ -1171,6 +1201,53 @@ const formSystem = {
         document.querySelectorAll('form').forEach(form => {
             form.addEventListener('reset', () => this.resetForm(form));
         });
+    }
+};
+
+const logoutSystem = {
+    init() {
+        this.setupLogoutHandler();
+    },
+
+    setupLogoutHandler() {
+        const logoutForm = document.querySelector('#logoutModal form');
+        if (logoutForm) {
+            logoutForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const submitButton = logoutForm.querySelector('button[type="submit"]');
+                const originalText = submitButton.innerHTML;
+
+                try {
+                    // Show loading state
+                    submitButton.disabled = true;
+                    submitButton.innerHTML = `
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                        Logging out...
+                    `;
+
+                    const response = await fetch(logoutForm.action, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': utils.getCookie('csrftoken'),
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (response.ok) {
+                        window.location.href = '/login/';
+                    } else {
+                        throw new Error('Logout failed');
+                    }
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    utils.showNotification('Logout failed. Please try again.', 'error');
+                    
+                    // Reset button state
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalText;
+                }
+            });
+        }
     }
 };
 
@@ -1259,6 +1336,7 @@ document.addEventListener('DOMContentLoaded', function() {
         themeSystem.init();
         sidebarSystem.init();
         notificationSystem.init();
+        logoutSystem.init();
         formSystem.init();
         
         // UI systems with checks

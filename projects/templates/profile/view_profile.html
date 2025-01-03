@@ -1,110 +1,127 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Profile | Project Hub{% endblock %}
+{% block title %}Profile | ProjectHub{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/view_profile.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid px-4">
     <!-- Header Section -->
-    <div class="section-header mb-4">
-        <h2 class="gradient-text text-center">Profile Overview</h2>
-        <p class="text-muted text-center">Manage your personal information and settings</p>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="gradient-text mb-0">Profile Overview</h2>
+            <p class="text-muted mt-2">Manage your personal information and settings</p>
+        </div>
     </div>
 
     <!-- Profile Content -->
     <div class="row">
-        <div class="col-lg-8 offset-lg-2">
-            <div class="glass-card profile-card">
+        <div class="col-lg-8 mx-auto">
+            <div class="glass-card">
                 <!-- Profile Header -->
-                <div class="profile-header text-center">
-                    <div class="avatar-wrapper" id="avatarWrapper">
-                        {% if profile.profile_picture %}
-                            <img src="{{ profile.profile_picture.url }}" alt="Profile" class="profile-avatar">
-                        {% else %}
-                            <div class="avatar-placeholder">
-                                {{ user.username|slice:":1"|upper }}
-                            </div>
-                        {% endif %}
-                        <button class="avatar-upload-btn" id="uploadAvatarBtn" aria-label="Upload profile picture">
-                            <i class="bi bi-camera"></i>
-                        </button>
-                    </div>
-                    <h3 class="profile-name">{{ user.get_full_name|default:user.username }}</h3>
-                    <p class="profile-email text-gradient">{{ user.email }}</p>
-                </div>
-
-                <!-- Profile Stats -->
-                <div class="profile-stats">
-                    <div class="row g-3">
-                        <div class="col-4">
-                            <div class="stat-card">
-                                <div class="stat-value">{{ projects_count|default:0 }}</div>
-                                <div class="stat-label">Projects</div>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="stat-card">
-                                <div class="stat-value">{{ tasks_count|default:0 }}</div>
-                                <div class="stat-label">Tasks</div>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="stat-card">
-                                <div class="stat-value">{{ completion_rate|default:0 }}%</div>
-                                <div class="stat-label">Completed</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Profile Information -->
-                <div class="row g-4 mt-4">
-                    <div class="col-md-6">
-                        <div class="info-section">
-                            <h5 class="section-title">Personal Information</h5>
-                            <ul class="info-list">
-                                <li class="info-item">
-                                    <i class="bi bi-person"></i>
-                                    <span class="label">Username:</span>
-                                    <span class="value">{{ user.username }}</span>
-                                </li>
-                                {% if profile.phone_number %}
-                                <li class="info-item">
-                                    <i class="bi bi-telephone"></i>
-                                    <span class="label">Phone:</span>
-                                    <span class="value">{{ profile.phone_number }}</span>
-                                </li>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <div class="avatar-upload">
+                            <div class="avatar-preview rounded-circle mx-auto mb-3">
+                                {% if profile.profile_picture %}
+                                    <img src="{{ profile.profile_picture.url }}" 
+                                         alt="Profile" 
+                                         class="w-100 h-100 rounded-circle object-fit-cover">
+                                {% else %}
+                                    <div class="avatar-placeholder h-100 d-flex align-items-center justify-content-center">
+                                        {{ user.username|slice:":1"|upper }}
+                                    </div>
                                 {% endif %}
-                                {% if profile.date_of_birth %}
-                                <li class="info-item">
-                                    <i class="bi bi-calendar"></i>
-                                    <span class="label">Date of Birth:</span>
-                                    <span class="value">{{ profile.date_of_birth }}</span>
-                                </li>
-                                {% endif %}
-                            </ul>
+                            </div>
+                            <div class="upload-controls">
+                                <button type="button" 
+                                        class="btn btn-outline-primary btn-sm" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#uploadAvatarModal">
+                                    <i class="bi bi-camera me-2"></i>Change Photo
+                                </button>
+                            </div>
                         </div>
+                        <h3 class="mt-3 mb-1">{{ user.get_full_name|default:user.username }}</h3>
+                        <p class="text-muted">{{ user.email }}</p>
                     </div>
-                    <div class="col-md-6">
-                        <div class="info-section">
-                            <h5 class="section-title">Bio</h5>
-                            <p class="bio-text">{{ profile.bio|default:"No bio available" }}</p>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Action Buttons -->
-                <div class="action-buttons mt-5 text-center">
-                    <a href="{% url 'update_profile' %}" class="btn btn-primary me-2">
-                        <i class="bi bi-pencil"></i> Edit Profile
-                    </a>
-                    <a href="{% url 'settings' %}" class="btn btn-outline-primary">
-                        <i class="bi bi-gear"></i> Settings
-                    </a>
+                    <!-- Profile Stats -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-4">
+                            <div class="glass-card stat-card">
+                                <i class="bi bi-folder text-primary display-4"></i>
+                                <div class="stat-value" data-stat-value="{{ projects_count|default:0 }}">
+                                    {{ projects_count|default:0 }}
+                                </div>
+                                <p class="stat-label">Projects</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="glass-card stat-card">
+                                <i class="bi bi-list-check text-info display-4"></i>
+                                <div class="stat-value" data-stat-value="{{ tasks_count|default:0 }}">
+                                    {{ tasks_count|default:0 }}
+                                </div>
+                                <p class="stat-label">Tasks</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="glass-card stat-card">
+                                <i class="bi bi-check-circle text-success display-4"></i>
+                                <div class="stat-value" data-stat-value="{{ completion_rate|default:0 }}">
+                                    {{ completion_rate|default:0 }}%
+                                </div>
+                                <p class="stat-label">Completed</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Profile Information -->
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="info-section">
+                                <h5 class="section-title mb-3">Personal Information</h5>
+                                <ul class="info-list">
+                                    <li class="info-item d-flex align-items-center gap-2 mb-3">
+                                        <i class="bi bi-person text-primary"></i>
+                                        <span class="label text-muted">Username:</span>
+                                        <span class="value ms-auto">{{ user.username }}</span>
+                                    </li>
+                                    {% if profile.phone_number %}
+                                    <li class="info-item d-flex align-items-center gap-2 mb-3">
+                                        <i class="bi bi-telephone text-primary"></i>
+                                        <span class="label text-muted">Phone:</span>
+                                        <span class="value ms-auto">{{ profile.phone_number }}</span>
+                                    </li>
+                                    {% endif %}
+                                    {% if profile.date_of_birth %}
+                                    <li class="info-item d-flex align-items-center gap-2 mb-3">
+                                        <i class="bi bi-calendar text-primary"></i>
+                                        <span class="label text-muted">Date of Birth:</span>
+                                        <span class="value ms-auto">{{ profile.date_of_birth }}</span>
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-section">
+                                <h5 class="section-title mb-3">Bio</h5>
+                                <p class="bio-text text-muted">{{ profile.bio|default:"No bio available" }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-center gap-3 mt-4">
+                        <a href="{% url 'update_profile' %}" class="btn btn-primary hover-translate">
+                            <i class="bi bi-pencil me-2"></i>Edit Profile
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -113,23 +130,34 @@
 
 <!-- Upload Avatar Modal -->
 <div class="modal fade" id="uploadAvatarModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card border-0">
+            <div class="modal-header border-bottom">
                 <h5 class="modal-title">Update Profile Picture</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <form id="avatarForm" method="POST" enctype="multipart/form-data">
+            <div class="modal-body p-4">
+                <form id="avatarForm" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
                     {% csrf_token %}
                     <div class="mb-3">
                         <label for="avatarInput" class="form-label">Choose Image</label>
-                        <input type="file" class="form-control" id="avatarInput" name="profile_picture" accept="image/*">
+                        <input type="file" 
+                               class="form-control" 
+                               id="avatarInput" 
+                               name="profile_picture" 
+                               accept="image/*" 
+                               required>
+                        <div class="form-text">Maximum file size: 2MB</div>
+                        <div class="invalid-feedback">Please select an image file.</div>
                     </div>
-                    <div class="preview-area mb-3 d-none">
-                        <img id="avatarPreview" src="#" alt="Preview" class="img-fluid rounded">
+                    <div class="preview-area d-none mb-3">
+                        <img id="avatarPreview" src="#" alt="Preview" class="img-fluid rounded-circle">
                     </div>
-                    <button type="submit" class="btn btn-primary">Upload</button>
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary hover-translate" data-loading-text="Uploading...">
+                            <i class="bi bi-cloud-upload me-2"></i>Upload
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -138,5 +166,151 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/profile.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const profileSystem = {
+            elements: {
+                avatarForm: document.getElementById('avatarForm'),
+                avatarInput: document.getElementById('avatarInput'),
+                avatarPreview: document.getElementById('avatarPreview'),
+                previewArea: document.querySelector('.preview-area'),
+                uploadModal: document.getElementById('uploadAvatarModal'),
+                mainAvatar: document.querySelector('.avatar-preview img'), // Add main avatar reference
+                avatarPlaceholder: document.querySelector('.avatar-placeholder')
+            },
+    
+            init() {
+                this.bindEvents();
+                window.projectHub?.statsSystem?.animateStats();
+            },
+    
+            bindEvents() {
+                this.elements.avatarInput?.addEventListener('change', this.handleFilePreview.bind(this));
+                this.elements.avatarForm?.addEventListener('submit', this.handleAvatarUpload.bind(this));
+            },
+    
+            handleFilePreview(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+    
+                // Validate file type
+                if (!file.type.match('image.*')) {
+                    window.projectHub.utils.showNotification('Please select an image file', 'error');
+                    e.target.value = '';
+                    return;
+                }
+    
+                // Validate file size (2MB)
+                if (file.size > 2 * 1024 * 1024) {
+                    window.projectHub.utils.showNotification('File size must be less than 2MB', 'error');
+                    e.target.value = '';
+                    return;
+                }
+    
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.elements.avatarPreview.src = e.target.result;
+                    this.elements.previewArea.classList.remove('d-none');
+                };
+                reader.readAsDataURL(file);
+            },
+    
+            async handleAvatarUpload(e) {
+                e.preventDefault();
+                const form = e.target;
+                const submitBtn = form.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+    
+                try {
+                    // Validate form
+                    if (!form.checkValidity()) {
+                        form.classList.add('was-validated');
+                        return;
+                    }
+    
+                    // Show loading state
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Uploading...`;
+    
+                    const formData = new FormData(form);
+                    const response = await fetch('/profile/update-avatar/', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': window.projectHub.utils.getCookie('csrftoken'),
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    });
+    
+                    const data = await response.json();
+    
+                    if (!response.ok) {
+                        throw new Error(data.message || 'Failed to update profile picture');
+                    }
+    
+                    if (data.success) {
+                        // Update main avatar
+                        if (this.elements.mainAvatar) {
+                            this.elements.mainAvatar.src = data.avatar_url;
+                        }
+                        
+                        // Update placeholder if needed
+                        if (this.elements.avatarPlaceholder) {
+                            this.elements.avatarPlaceholder.style.display = 'none';
+                        }
+    
+                        // Update navbar avatar if exists
+                        const navbarAvatar = document.querySelector('.user-avatar img');
+                        if (navbarAvatar) {
+                            navbarAvatar.src = data.avatar_url;
+                        }
+    
+                        // Close modal
+                        const modal = bootstrap.Modal.getInstance(this.elements.uploadModal);
+                        if (modal) {
+                            modal.hide();
+                        }
+    
+                        // Reset form
+                        form.reset();
+                        this.elements.previewArea.classList.add('d-none');
+    
+                        // Show success message
+                        window.projectHub.utils.showNotification(
+                            'Profile picture updated successfully',
+                            'success'
+                        );
+                    }
+                } catch (error) {
+                    console.error('Avatar upload error:', error);
+                    window.projectHub.utils.showNotification(
+                        error.message || 'Failed to update profile picture',
+                        'error'
+                    );
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+            },
+    
+            updateAvatarUI(avatarUrl) {
+                const avatarElements = document.querySelectorAll('.avatar-preview img');
+                avatarElements.forEach(avatar => {
+                    avatar.src = avatarUrl;
+                });
+            }
+        };
+    
+        // Initialize profile system
+        try {
+            profileSystem.init();
+        } catch (error) {
+            console.error('Profile initialization error:', error);
+            window.projectHub.utils.showNotification(
+                'Failed to initialize profile',
+                'error'
+            );
+        }
+    });
+</script>
 {% endblock %}

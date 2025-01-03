@@ -1,63 +1,250 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load custom_filters %}
 
-{% block title %}
-    {% if team %}Update Team{% else %}Create New Team{% endif %}
+{% block title %}{% if team %}Update Team{% else %}Create New Team{% endif %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/team_form.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col">
-            <h2 class="text-center">
-                {% if team %}Update Team{% else %}Create New Team{% endif %}
-            </h2>
+<div class="container py-4">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="gradient-text mb-0">{% if team %}Update Team{% else %}Create New Team{% endif %}</h2>
+            <p class="text-muted">{% if team %}Update team details{% else %}Create a new team to start collaborating{% endif %}</p>
         </div>
+        <a href="{% url 'team_list' %}" class="btn btn-outline-secondary hover-translate">
+            <i class="bi bi-arrow-left me-2"></i>Back to Teams
+        </a>
     </div>
 
-    {% if messages %}
-    <div class="messages mb-4">
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
+    <!-- Form Section -->
     <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <form method="POST" class="p-3">
+        <div class="col-lg-8">
+            <div class="glass-card">
+                <div class="card-body p-4">
+                    <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate data-ajax>
                         {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="name" class="form-label">Team Name</label>
+                        
+                        <!-- Team Name -->
+                        <div class="mb-4">
+                            <label for="name" class="form-label">Team Name*</label>
                             <input type="text" 
-                                   class="form-control" 
+                                   class="form-control {% if form.name.errors %}is-invalid{% endif %}" 
                                    id="name" 
                                    name="name" 
                                    value="{{ team.name|default:'' }}" 
-                                   required>
+                                   required
+                                   minlength="3"
+                                   maxlength="100"
+                                   placeholder="Enter team name">
+                            {% if form.name.errors %}
+                            <div class="invalid-feedback">{{ form.name.errors|join:", " }}</div>
+                            {% endif %}
+                            <div class="form-text">Choose a clear, descriptive name for your team (3-100 characters)</div>
                         </div>
-                        <div class="mb-3">
+
+                        <!-- Team Description -->
+                        <div class="mb-4">
                             <label for="description" class="form-label">Description</label>
-                            <textarea class="form-control" 
-                                      id="description" 
-                                      name="description" 
-                                      rows="3">{{ team.description|default:'' }}</textarea>
+                            <textarea class="form-control {% if form.description.errors %}is-invalid{% endif %}" 
+                                    id="description" 
+                                    name="description" 
+                                    rows="4"
+                                    maxlength="500"
+                                    placeholder="Describe the team's purpose and goals">{{ team.description|default:'' }}</textarea>
+                            {% if form.description.errors %}
+                            <div class="invalid-feedback">{{ form.description.errors|join:", " }}</div>
+                            {% endif %}
+                            <div class="form-text">
+                                <span id="descriptionCount">0</span>/500 characters
+                            </div>
                         </div>
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">
+
+                        <!-- Team Avatar -->
+                        <div class="mb-4">
+                            <label for="avatar" class="form-label">Team Avatar</label>
+                            <div class="avatar-upload">
+                                <div class="avatar-preview mb-3 {% if not team.avatar %}d-none{% endif %}">
+                                    <img src="{{ team.avatar.url|default:'#' }}" 
+                                         alt="Avatar preview"
+                                         class="rounded"
+                                         id="avatarPreview"
+                                         style="max-width: 100px; height: auto;">
+                                </div>
+                                <input type="file" 
+                                       class="form-control {% if form.avatar.errors %}is-invalid{% endif %}" 
+                                       id="avatar" 
+                                       name="avatar"
+                                       accept="image/jpeg,image/png,image/gif"
+                                       data-max-size="2">
+                                {% if form.avatar.errors %}
+                                <div class="invalid-feedback">{{ form.avatar.errors|join:", " }}</div>
+                                {% endif %}
+                                <div class="form-text">Optional: Upload a team avatar (JPEG, PNG, GIF, max 2MB)</div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-flex justify-content-end gap-3">
+                            <a href="{% url 'team_list' %}" class="btn btn-outline-secondary hover-translate">Cancel</a>
+                            <button type="submit" class="btn btn-primary hover-translate">
+                                <i class="bi bi-{% if team %}save{% else %}plus-lg{% endif %} me-2"></i>
                                 {% if team %}Update Team{% else %}Create Team{% endif %}
                             </button>
-                            <a href="{% url 'team_list' %}" class="btn btn-secondary">Cancel</a>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
+
+        <!-- Tips Section -->
+        <div class="col-lg-4">
+            <div class="glass-card">
+                <div class="card-body p-4">
+                    <h5 class="card-title mb-4">Tips for Success</h5>
+                    <div class="tips-list">
+                        <div class="tip-item">
+                            <i class="bi bi-lightbulb text-warning"></i>
+                            <span>Choose a clear, memorable team name</span>
+                        </div>
+                        <div class="tip-item">
+                            <i class="bi bi-pencil text-info"></i>
+                            <span>Write a detailed description</span>
+                        </div>
+                        <div class="tip-item">
+                            <i class="bi bi-people text-primary"></i>
+                            <span>You can add members after creating</span>
+                        </div>
+                        <div class="tip-item">
+                            <i class="bi bi-shield-check text-success"></i>
+                            <span>You'll be the team owner by default</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form[data-ajax]');
+    const description = document.getElementById('description');
+    const descriptionCount = document.getElementById('descriptionCount');
+    const avatarInput = document.getElementById('avatar');
+    const avatarPreview = document.getElementById('avatarPreview');
+    const previewContainer = document.querySelector('.avatar-preview');
+
+    if (!form) return;
+
+    // Description character count
+    if (description && descriptionCount) {
+        const updateCount = () => {
+            const count = description.value.length;
+            descriptionCount.textContent = count;
+            descriptionCount.classList.toggle('text-danger', count > 500);
+        };
+        
+        description.addEventListener('input', updateCount);
+        updateCount();
+    }
+
+    // Avatar preview
+    if (avatarInput && avatarPreview && previewContainer) {
+        avatarInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                
+                // Validate file size
+                if (file.size > 2 * 1024 * 1024) {
+                    this.value = '';
+                    window.projectHub.utils.showNotification(
+                        'File size must be less than 2MB',
+                        'error'
+                    );
+                    previewContainer.classList.add('d-none');
+                    return;
+                }
+
+                // Validate file type
+                if (!file.type.match('image.*')) {
+                    this.value = '';
+                    window.projectHub.utils.showNotification(
+                        'Please select an image file',
+                        'error'
+                    );
+                    previewContainer.classList.add('d-none');
+                    return;
+                }
+
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    avatarPreview.src = e.target.result;
+                    previewContainer.classList.remove('d-none');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                previewContainer.classList.add('d-none');
+            }
+        });
+    }
+
+    // Form submission
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        if (!this.checkValidity()) {
+            e.stopPropagation();
+            this.classList.add('was-validated');
+            return;
+        }
+
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        try {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `
+                <span class="spinner-border spinner-border-sm me-2"></span>
+                Processing...
+            `;
+
+            const formData = new FormData(this);
+            const response = await fetch(this.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                window.projectHub.utils.showNotification(data.message, 'success');
+                window.location.href = data.redirect_url || '{% url "team_list" %}';
+            } else {
+                throw new Error(data.message || 'Failed to save team');
+            }
+        } catch (error) {
+            console.error('Form submission error:', error);
+            window.projectHub.utils.showNotification(
+                error.message || 'An error occurred while saving the team',
+                'error'
+            );
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    });
+});
+</script>
 {% endblock %}
